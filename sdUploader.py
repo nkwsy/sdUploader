@@ -14,6 +14,24 @@ from datetime import datetime
 # Insert appropriate path and files extention.
 sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
 home_folder = '/home/microscope/MediaBackup/'
+sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
+home_folder = '/home/lin/MediaBackup/'
+# sd_photo_folder = os.path.join('/media/',os.environ.get('USER'))
+# home_folder = os.path.join('/home/',os.environ.get('USER'),'/MediaBackup')
+print(sd_photo_folder, home_folder)
+
+# Progress bar
+def printProgressBar(value, max):
+    phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
+    progress = ttk.Progressbar(mainframe, orient=HORIZONTAL, maximum=max, mode='determinate')
+    progress.grid(column=1, row=8, sticky=(W, E))
+    ttk.Label(mainframe, text=phrase).grid(column=2, row=8, sticky=W)
+    progress['value'] = value
+    progress.update()
+    print(value)
+    pass
+
+
 def uploadFiles(*args):
 
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
@@ -41,7 +59,8 @@ def uploadFiles(*args):
         print('Folder exists:', exists.filename)
         print('Using existing folder...')
 
-    sd_files = os.listdir(dir)
+    sd_files = os.listdir(dir.get())
+    selected_sd_folder = dir.get()
     #Filter for raw extension
     selected_files = [k for k in sd_files if k.endswith(file_extension)]
 
@@ -54,10 +73,10 @@ def uploadFiles(*args):
     printProgressBar(0, n_files)
 
     for i, file_name in enumerate(selected_files):
-        printProgressBar(i + 1, n_files)
-
+        printProgressBar(i+1, n_files)
+        print(i + 1, n_files)
         try:
-            shutil.copy(os.path.join(sd_photo_folder, file_name), output_folder)
+            shutil.copy(os.path.join(selected_sd_folder, file_name), output_folder)
         except Error as err:
             print(err)
     textFile = output_folder + '/info.txt'
@@ -91,9 +110,9 @@ ttk.Label(mainframe, textvariable=meters).grid(column=1, row=2, sticky=(W, E))
 def browse_button():
     filename = fd.askdirectory(initialdir= sd_photo_folder)
     print(filename)
-    return os.path.join(filename)
+    dir.set(filename)
 
-
+progress = ttk.Progressbar(mainframe, orient=HORIZONTAL, length=max, mode='determinate')
 # Ranger Name
 name = StringVar()
 ttk.Label(mainframe, text="Photographer").grid(column=0, row=1, sticky=W)
@@ -125,7 +144,7 @@ nameEntry.grid(column=1, row=4, sticky=(W, E))
 #File Directory
 dir = StringVar()
 ttk.Label(mainframe, text="image folder").grid(column=0, row=6, sticky=W)
-dir = ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
+ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
 print(dir)
 # dirEntry.grid(column=1, row=6, sticky=(W, E))
 
@@ -151,13 +170,7 @@ def submit(*args):
 
 ttk.Button(mainframe, text="Submit", command=submit).grid(column=3, row=7, sticky=W)
 
-# Progress bar
-def printProgressBar(value, max):
-    progress = ttk.Progressbar(mainframe, orient=HORIZONTAL, length=max, mode='determinate')
-    progress.grid(column=1, row=8, sticky=(W, E))
-    ttk.Label(mainframe, text="Uploading... do not exit or pull out SD").grid(column=2, row=8, sticky=W)
-    progress['value'] = value
-    pass
+
 
 # wipeSD wipeSD window
 def wipeSDWindow(mydir):

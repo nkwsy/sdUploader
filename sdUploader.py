@@ -76,7 +76,7 @@ def uploadFiles(*args):
         printProgressBar(i+1, n_files)
         print(i + 1, n_files)
         try:
-            shutil.copy(os.path.join(selected_sd_folder, file_name), output_folder)
+            shutil.copy2(os.path.join(selected_sd_folder, file_name), output_folder)
         except Error as err:
             print(err)
     textFile = output_folder + '/info.txt'
@@ -145,6 +145,8 @@ nameEntry.grid(column=1, row=4, sticky=(W, E))
 dir = StringVar()
 ttk.Label(mainframe, text="image folder").grid(column=0, row=6, sticky=W)
 ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
+ttk.Label(mainframe, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
+
 print(dir)
 # dirEntry.grid(column=1, row=6, sticky=(W, E))
 

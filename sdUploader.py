@@ -16,15 +16,15 @@ sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
 home_folder = '/home/microscope/MediaBackup/'
 def uploadFiles(*args):
 
-    file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    base_folder = home_folder  + str(dir.get())+ ''.join(args)
+    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+    file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4") # Set extension of both
+    base_folder = home_folder  + str(camera.get())+ ''.join(args)
     year_folder = str(dateEntry.get_date().year)
     folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + location.get() + ' '.join(args)
     today = datetime.now()
 
     # year_folder = str('2021')
 
-    file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4") # Set extension of both
 
 
     # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)

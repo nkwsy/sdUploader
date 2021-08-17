@@ -126,7 +126,7 @@ nameEntry.grid(column=1, row=4, sticky=(W, E))
 dir = StringVar()
 ttk.Label(mainframe, text="image folder").grid(column=0, row=6, sticky=W)
 dir = ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
-
+print(dir)
 # dirEntry.grid(column=1, row=6, sticky=(W, E))
 
 # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))

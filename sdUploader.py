@@ -41,7 +41,7 @@ def uploadFiles(*args):
         print('Folder exists:', exists.filename)
         print('Using existing folder...')
 
-    sd_files = os.listdir(sd_photo_folder)
+    sd_files = os.listdir(dir)
     #Filter for raw extension
     selected_files = [k for k in sd_files if k.endswith(file_extension)]
 
@@ -106,7 +106,7 @@ camera = StringVar()
 ttk.Label(mainframe, text="Camera").grid(column=0, row=2, sticky=W)
 ttk.Label(mainframe, text="Type of device or use").grid(column=2, row=2, sticky=W)
 cameraEntry = ttk.Combobox(mainframe, textvariable=camera,
-   values=('Drone', 'UnderwaterGopro', 'Gopro' , 'CameraTrap'))
+   values=('Drone', 'UnderwaterGoPro', 'GoPro' , 'CameraTrap'))
 cameraEntry.grid(column=1, row=2, sticky=(W, E))
 
 # Date Entry

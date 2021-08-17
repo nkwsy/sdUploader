@@ -73,7 +73,7 @@ def uploadFiles(*args):
 
 ############## GUI
 root = Tk()
-root.title("Feet to Meters")
+root.title("SD card uploader")
 
 mainframe = ttk.Frame(root, padding="3 3 12 12")
 mainframe.grid(column=0, row=0, sticky=(N, W, E, S))

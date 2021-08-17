@@ -91,7 +91,7 @@ ttk.Label(mainframe, textvariable=meters).grid(column=1, row=2, sticky=(W, E))
 def browse_button():
     filename = fd.askdirectory(initialdir= sd_photo_folder)
     print(filename)
-    return dir = os.path.join(filename)
+    return os.path.join(filename)
 
 
 # Ranger Name
@@ -123,7 +123,7 @@ nameEntry = ttk.Entry(mainframe, width=7, textvariable=location)
 nameEntry.grid(column=1, row=4, sticky=(W, E))
 
 #File Directory
-#dir = StringVar()
+dir = StringVar()
 ttk.Label(mainframe, text="image folder").grid(column=0, row=6, sticky=W)
 dir = ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
 

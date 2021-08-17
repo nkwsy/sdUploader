@@ -6,7 +6,6 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog as fd
 import tkcalendar
-import uploader
 import os
 import sys
 import shutil

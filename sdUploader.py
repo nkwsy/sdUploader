@@ -1,3 +1,5 @@
+#!/bin/python
+
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
@@ -10,7 +12,7 @@ import shutil
 from datetime import datetime
 
 # Insert appropriate path and files extention.
-sd_photo_folder = '/media/' # example: '/media/mycard/disk/DCIM/'
+sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
 home_folder = '/home/microscope/MediaBackup/'
 def uploadFiles(*args):
 

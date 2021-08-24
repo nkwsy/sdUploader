@@ -14,8 +14,9 @@ from datetime import datetime
 # Insert appropriate path and files extention.
 sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
 home_folder = '/home/microscope/MediaBackup/'
-sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
-home_folder = '/home/lin/MediaBackup/'
+#for testing computer
+# sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
+# home_folder = '/home/lin/MediaBackup/'
 # sd_photo_folder = os.path.join('/media/',os.environ.get('USER'))
 # home_folder = os.path.join('/home/',os.environ.get('USER'),'/MediaBackup')
 print(sd_photo_folder, home_folder)

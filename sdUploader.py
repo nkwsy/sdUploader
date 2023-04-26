@@ -10,10 +10,16 @@ import os
 import sys
 import shutil
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Set default values
+
 
 # Insert appropriate path and files extention.
-sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
-home_folder = '/home/microscope/MediaBackup/'
+sd_photo_folder = os.getenv("SD_PHOTO_FOLDER") # example: '/media/mycard/disk/DCIM/'
+home_folder = os.getenv("HOME_FOLDER") # example: '/media/mycard/disk/DCIM/'4
 #for testing computer
 # sd_photo_folder = '/media/microscope/' # example: '/media/mycard/disk/DCIM/'
 # home_folder = '/home/lin/MediaBackup/'
@@ -36,7 +42,7 @@ def printProgressBar(value, max):
 def uploadFiles(*args):
 
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4") # Set extension of both
+    file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
     base_folder = home_folder  + str(camera.get())+ ''.join(args)
     year_folder = str(dateEntry.get_date().year)
     folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + location.get() + ' '.join(args)

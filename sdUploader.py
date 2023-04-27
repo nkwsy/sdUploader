@@ -11,7 +11,10 @@ import sys
 import shutil
 from datetime import datetime
 from dotenv import load_dotenv
+from loguru import logger
 
+logger.add(sys.stderr, format="{time} {level} {message}", filter="my_module", level="INFO")
+logger.add("sdUploader.log", rotation="5 MB")
 load_dotenv()
 
 # Set default values
@@ -25,7 +28,7 @@ home_folder = os.getenv("HOME_FOLDER") # example: '/media/mycard/disk/DCIM/'4
 # home_folder = '/home/lin/MediaBackup/'
 # sd_photo_folder = os.path.join('/media/',os.environ.get('USER'))
 # home_folder = os.path.join('/home/',os.environ.get('USER'),'/MediaBackup')
-print(sd_photo_folder, home_folder)
+logger.info(sd_photo_folder, home_folder)
 
 # Progress bar
 def printProgressBar(value, max):
@@ -35,7 +38,7 @@ def printProgressBar(value, max):
     ttk.Label(mainframe, text=phrase).grid(column=2, row=8, sticky=W)
     progress['value'] = value
     progress.update()
-    print(value)
+    logger.info(value)
     pass
 
 
@@ -81,18 +84,18 @@ def uploadFiles(*args):
 
     for i, file_name in enumerate(selected_files):
         printProgressBar(i+1, n_files)
-        print(i + 1, n_files)
+        logger.info(i + 1, n_files)
         try:
             shutil.copy2(os.path.join(selected_sd_folder, file_name), output_folder)
         except Error as err:
-            print(err)
+            logger.error(err)
     textFile = output_folder + '/info.txt'
     file1 = open(textFile,"w")
     info = name.get()+  '\n'+ camera.get()+  '\n'+  date.get()+  '\n'
     print(info)
     with open(textFile, 'w') as f:
         f.write(info)
-    print('Finished!')
+    logger.info('Finished!')
     wipeSDWindow(sd_photo_folder)
     pass
 
@@ -190,7 +193,7 @@ def wipeSDWindow(mydir):
         try:
             shutil.rmtree(mydir)
         except OSError as e:
-            print ("Error: %s - %s." % (e.filename, e.strerror))
+            logger.error("Error: %s - %s." % (e.filename, e.strerror))
         pass
 
 # feet_entry.grid(column=1, row=1, sticky=(W, E))

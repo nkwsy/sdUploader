@@ -18,7 +18,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 import re
 import psutil
 
-logger.add(sys.stderr, format="{time} {level} {message}", filter="my_module", level="INFO")
+logger.add(sys.stderr, level="INFO")
 logger.add("sdUploader.log", rotation="5 MB")
 load_dotenv()
 
@@ -50,61 +50,58 @@ def printProgressBar(value, max):
     logger.info(value)
     pass
 
-
-def uploadFiles(*args):
-    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+def get_files_in_folder(dir):
     file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
-    base_folder = home_folder  + str(camera.get())+ ''.join(args)
-    year_folder = str(dateEntry.get_date().year)
-    folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + location.get() + ' '.join(args)
+    sd_files = os.listdir(dir)
+    #Filter for raw extension
+    selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
+    return selected_files
+
+# pass camera, dateEntry/date, location, file_list, info, 
+def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
+    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+    base_folder = f"{home_folder}{camera}"
+    print(date)
+    print(type(date))
+    folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"
     today = datetime.now()
-    # year_folder = str('2021')
+    year_folder = f"{date.year}"
     # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
     folder_name = folder_name.strip()
-
     output_folder = os.path.join(base_folder, year_folder, folder_name)
-
     #Create output folder
     try:
         os.makedirs(output_folder)
+        logger.info(f'created output folder {output_folder}')
     except FileExistsError as exists:
         print('Folder exists:', exists.filename)
         print('Using existing folder...')
-
-    sd_files = os.listdir(dir.get())
-    selected_sd_folder = dir.get()
-    #Filter for raw extension
-    selected_files = [k for k in sd_files if k.endswith(file_extension)]
-
     #Copy files
     #Progress bar
-    n_files = len(selected_files)
-
-    print(f'Copying {n_files} {file_extension} files to {output_folder}')
-
+    n_files = len(file_list)
+    logger.info(f'Copying {n_files} files to {output_folder}')
     printProgressBar(0, n_files)
-
-    for i, file_name in enumerate(selected_files):
+    for i, file_name in enumerate(file_list):
         printProgressBar(i+1, n_files)
-        logger.info(i + 1, n_files)
         try:
-            shutil.copy2(os.path.join(selected_sd_folder, file_name), output_folder)
-        except Error as err:
+            shutil.copy2(os.path.join( file_name), output_folder)
+        except Exception as err:
             logger.error(err)
     textFile = output_folder + '/info.txt'
-    file1 = open(textFile,"w")
-    info = name.get()+  '\n'+ camera.get()+  '\n'+  date.get()+  '\n'
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
     print(info)
     with open(textFile, 'w') as f:
         f.write(info)
-    logger.info('Finished!')
-    wipeSDWindow(sd_photo_folder)
+    logger.info('Finished uploading files!')
     pass
 
 ############## EXIF file stuff
 def handle_exif_data(img_path):
-    image = Image.open(img_path)
-    exifdata = image._getexif()
+    try:
+        image = Image.open(img_path)
+        exifdata = image._getexif()
+    except:
+        return None
     tags = {}
     if not exifdata:
         return None
@@ -124,6 +121,7 @@ exif_makes = {
     '360Camera': ['Ricoh', 'Insta360', 'GoPro', 'Samsung']
 }
 
+#TODO Check if exif standardizes date info
 def parse_date(date_string):
     return datetime.strptime(date_string, '%Y:%m:%d %H:%M:%S')
 
@@ -171,10 +169,7 @@ def get_camera_type(make):
     return None
 
 def get_image_info(img_path):
-    try:  
-        exif_data = handle_exif_data(img_path)
-    except:
-        return None
+    exif_data = handle_exif_data(img_path)
     if exif_data is None:
         return None
     make = exif_data.get('Make')
@@ -192,7 +187,7 @@ def get_all_image_info(mount_point):
             all_images.append(f_info)
         else:
             non_images.append(x)
-    return all_images, non_images
+    return {'images': all_images, 'non_images':non_images }
 
 
 ############## GUI
@@ -241,6 +236,7 @@ progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, length=max, mode='de
 dir = StringVar()
 ttk.Label(auto_frame, text="SD card").grid(column=0, row=6, sticky=W)
 ttk.Label(auto_frame, text=check_sd()).grid(column=2, row=2, sticky=W)
+
 sd_entry = ttk.Combobox(auto_frame, textvariable=dir,
    values=(check_sd()))
 sd_entry.grid(column=1, row=2, sticky=(W, E))
@@ -248,7 +244,7 @@ sd_entry.grid(column=1, row=2, sticky=(W, E))
 ttk.Button(auto_frame, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
 ttk.Label(auto_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
 
-
+#TODO make this a class
 #### Manual upload frame
 # Ranger Name
 name = StringVar()
@@ -300,11 +296,14 @@ nameEntry.grid(column=1, row=5, sticky=(W, E))
 # 	    variable=wipeSD)
 
 # Submit
-def submit(*args):
+def submit():
     # mainFolder =  'home_folder' + str(camera.get())+ ''.join(args)
     # folderNameYear = str(dateEntry.get_date().year)
     # subfolder_name = dateEntry.get_date().strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-    uploadFiles(*args)
+    print(notes.get())
+    # args = {'camera':camera.get(), 'date':dateEntry.get_date(), 'location': location.get(), 'notes': notes.get(),'file_list': get_files_in_folder(dir.get())}
+    uploadFiles(camera.get(), dateEntry.get_date(),  location.get(), notes.get(), get_files_in_folder(dir.get()))
+    wipeSDWindow(dir)
     pass
 
 ttk.Button(manual_frame, text="Submit", command=submit).grid(column=3, row=7, sticky=W)

@@ -2,6 +2,7 @@
 
 
 from tkinter import *
+import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog as fd
@@ -12,12 +13,20 @@ import shutil
 from datetime import datetime
 from dotenv import load_dotenv
 from loguru import logger
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
+import re
+import psutil
 
 logger.add(sys.stderr, format="{time} {level} {message}", filter="my_module", level="INFO")
 logger.add("sdUploader.log", rotation="5 MB")
 load_dotenv()
 
 # Set default values
+#TODO Use PSUTIL to get to this folder automaticly
+#TODO get EXIF data to create folders based on dates, allow user to manually override
+#TODO get EXIF data to determine camera type
+#TODO Use Dronedeploy api to pull mission data and compare GPS coordinates of photos to automaticly sort into folder based on flight
 
 
 # Insert appropriate path and files extention.
@@ -28,14 +37,14 @@ home_folder = os.getenv("HOME_FOLDER") # example: '/media/mycard/disk/DCIM/'4
 # home_folder = '/home/lin/MediaBackup/'
 # sd_photo_folder = os.path.join('/media/',os.environ.get('USER'))
 # home_folder = os.path.join('/home/',os.environ.get('USER'),'/MediaBackup')
-logger.info(sd_photo_folder, home_folder)
+# logger.info(sd_photo_folder, home_folder)
 
 # Progress bar
 def printProgressBar(value, max):
     phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
-    progress = ttk.Progressbar(mainframe, orient=HORIZONTAL, maximum=max, mode='determinate')
+    progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, maximum=max, mode='determinate')
     progress.grid(column=1, row=8, sticky=(W, E))
-    ttk.Label(mainframe, text=phrase).grid(column=2, row=8, sticky=W)
+    ttk.Label(manual_frame, text=phrase).grid(column=2, row=8, sticky=W)
     progress['value'] = value
     progress.update()
     logger.info(value)
@@ -43,21 +52,14 @@ def printProgressBar(value, max):
 
 
 def uploadFiles(*args):
-
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
     base_folder = home_folder  + str(camera.get())+ ''.join(args)
     year_folder = str(dateEntry.get_date().year)
     folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + location.get() + ' '.join(args)
     today = datetime.now()
-
     # year_folder = str('2021')
-
-
-
     # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-
-
     folder_name = folder_name.strip()
 
     output_folder = os.path.join(base_folder, year_folder, folder_name)
@@ -99,22 +101,133 @@ def uploadFiles(*args):
     wipeSDWindow(sd_photo_folder)
     pass
 
+############## EXIF file stuff
+def handle_exif_data(img_path):
+    image = Image.open(img_path)
+    exifdata = image._getexif()
+    tags = {}
+    if not exifdata:
+        return None
+    for tag_id, value in exifdata.items():
+        tag = TAGS.get(tag_id, tag_id)
+        tags[tag] = value
+    return tags
+        # if tag == 'Make' or tag == 'Model':
+        #     print(f"{tag}: {value}")
+
+#list of exif make data
+exif_makes = {
+    'Trailcam': ['Browning', 'Bushnell', 'Moultrie', 'Stealth Cam', 'Wildgame Innovations'],
+    'DSLR': ['Canon', 'Nikon', 'Sony', 'Pentax', 'Fujifilm', 'Olympus', 'Panasonic', 'Leica'],
+    'Drone': ['DJI', 'Parrot', 'Yuneec', 'Autel Robotics', 'Hasselblad'],
+    'GoPro': ['GoPro'],
+    '360Camera': ['Ricoh', 'Insta360', 'GoPro', 'Samsung']
+}
+
+def parse_date(date_string):
+    return datetime.strptime(date_string, '%Y:%m:%d %H:%M:%S')
+
+############# SD drive util
+
+def is_sdX_device(device_string):
+    match = re.match(r'/dev/sd[a-z]', device_string)
+    return match is not None
+
+def check_sd():
+    dp = psutil.disk_partitions()
+    devices = []
+    for drive in dp:
+        device = drive.device
+        mountpoint = drive.mountpoint
+        device_usage = psutil.disk_usage(mountpoint)
+        device_size = f'{device_usage.total / (1024 **3)}GB'
+        device_used = f'{device_usage.used/ (1024 **3)}GB'
+        if is_sdX_device(device):
+            devices.append({'device': device, 'mountpoint': mountpoint, 'device_size': device_size, 'device_used': device_used})
+    return devices
+
+
+def return_files_in_sd_card(dir_path):
+    file_locations = []
+    for root, dirs, files in os.walk(dir_path):
+        for file in files:
+            file_location = os.path.join(root, file)
+            file_locations.append(file_location)
+    return file_locations
+
+def print_files_in_dir(dir_path):
+    file_locations = []
+    for root, dirs, files in os.walk(dir_path):
+        for file in files:
+            file_location = os.path.join(root, file)
+            file_locations.append(file_location)
+    return file_locations
+
+def get_camera_type(make):
+    make = make.replace('\x00', '').strip()
+    for camera_type, makes in exif_makes.items():
+        if make in makes:
+            return camera_type
+    return None
+
+def get_image_info(img_path):
+    try:  
+        exif_data = handle_exif_data(img_path)
+    except:
+        return None
+    if exif_data is None:
+        return None
+    make = exif_data.get('Make')
+    date = exif_data.get('DateTimeOriginal')
+    camera_type = get_camera_type(make)
+    return {'date': parse_date(date), 'make': make, 'file': img_path, 'camera_type': camera_type}
+
+def get_all_image_info(mount_point):
+    files = return_files_in_sd_card(mount_point)
+    all_images = []
+    non_images = []
+    for x in files:
+        f_info = get_image_info(x)
+        if f_info is not None:
+            all_images.append(f_info)
+        else:
+            non_images.append(x)
+    return all_images, non_images
+
 
 ############## GUI
-root = Tk()
+# root = Tk()
+root = tk.Tk()
+
 root.title("SD card uploader")
 
-mainframe = ttk.Frame(root, padding="3 3 12 12")
-mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
+navbar = ttk.Notebook(root)
+tab1 = ttk.Frame(navbar)
+tab2 = ttk.Frame(navbar)
+navbar.add(tab1, text="Auto Upload")
+navbar.add(tab2, text="Manual Upload")
+navbar.pack(expand=1, fill="both")
+
+auto_frame = ttk.Frame(tab1, padding="3 3 12 12")
+auto_frame.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
+
+manual_frame = ttk.Frame(tab2, padding="3 3 12 12")
+manual_frame.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
+
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
 
+# mainframe = ttk.Frame(root, padding="3 3 12 12")
+# mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
+# root.columnconfigure(0, weight=1)
+# root.rowconfigure(0, weight=1)
+
 feet = StringVar()
-feet_entry = ttk.Entry(mainframe, width=7, textvariable=feet)
+feet_entry = ttk.Entry(manual_frame, width=7, textvariable=feet)
 feet_entry.grid(column=1, row=1, sticky=(W, E))
 
 meters = StringVar()
-ttk.Label(mainframe, textvariable=meters).grid(column=1, row=2, sticky=(W, E))
+ttk.Label(manual_frame, textvariable=meters).grid(column=1, row=2, sticky=(W, E))
 
 
 def browse_button():
@@ -122,40 +235,54 @@ def browse_button():
     print(filename)
     dir.set(filename)
 
-progress = ttk.Progressbar(mainframe, orient=HORIZONTAL, length=max, mode='determinate')
+progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, length=max, mode='determinate')
+#### Auto upload frame
+#File Directory
+dir = StringVar()
+ttk.Label(auto_frame, text="SD card").grid(column=0, row=6, sticky=W)
+ttk.Label(auto_frame, text=check_sd()).grid(column=2, row=2, sticky=W)
+sd_entry = ttk.Combobox(auto_frame, textvariable=dir,
+   values=(check_sd()))
+sd_entry.grid(column=1, row=2, sticky=(W, E))
+
+ttk.Button(auto_frame, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
+ttk.Label(auto_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
+
+
+#### Manual upload frame
 # Ranger Name
 name = StringVar()
-ttk.Label(mainframe, text="Photographer").grid(column=0, row=1, sticky=W)
-ttk.Label(mainframe, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-nameEntry = ttk.Entry(mainframe, width=7, textvariable=name)
+ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
+ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
+nameEntry = ttk.Entry(manual_frame, width=7, textvariable=name)
 nameEntry.grid(column=1, row=1, sticky=(W, E))
 
 # Camera Type
 camera = StringVar()
-ttk.Label(mainframe, text="Camera").grid(column=0, row=2, sticky=W)
-ttk.Label(mainframe, text="Type of device or use").grid(column=2, row=2, sticky=W)
-cameraEntry = ttk.Combobox(mainframe, textvariable=camera,
+ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
+ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
+cameraEntry = ttk.Combobox(manual_frame, textvariable=camera,
    values=('Drone', 'UnderwaterGoPro', 'GoPro' , 'CameraTrap'))
 cameraEntry.grid(column=1, row=2, sticky=(W, E))
 
 # Date Entry
 date = StringVar()
-ttk.Label(mainframe, text="Date").grid(column=0, row=3, sticky=W)
-dateEntry = tkcalendar.DateEntry(mainframe, width=7, textvariable=date)
+ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
+dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=date)
 dateEntry.grid(column=1, row=3, sticky=(W, E))
 
 # Location
 location = StringVar()
-ttk.Label(mainframe, text="Location/Title").grid(column=0, row=4, sticky=W)
-ttk.Label(mainframe, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
-nameEntry = ttk.Entry(mainframe, width=7, textvariable=location)
+ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
+ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
+nameEntry = ttk.Entry(manual_frame, width=7, textvariable=location)
 nameEntry.grid(column=1, row=4, sticky=(W, E))
 
 #File Directory
 dir = StringVar()
-ttk.Label(mainframe, text="image folder").grid(column=0, row=6, sticky=W)
-ttk.Button(mainframe, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
-ttk.Label(mainframe, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
+ttk.Label(manual_frame, text="image folder").grid(column=0, row=6, sticky=W)
+ttk.Button(manual_frame, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
+ttk.Label(manual_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
 
 print(dir)
 # dirEntry.grid(column=1, row=6, sticky=(W, E))
@@ -163,8 +290,8 @@ print(dir)
 # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
 # notes
 notes = StringVar()
-ttk.Label(mainframe, text="Notes").grid(column=0, row=5, sticky=W)
-nameEntry = ttk.Entry(mainframe, width=19, textvariable=notes)
+ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
+nameEntry = ttk.Entry(manual_frame, width=19, textvariable=notes)
 nameEntry.grid(column=1, row=5, sticky=(W, E))
 
 # # Delete after upload
@@ -180,7 +307,7 @@ def submit(*args):
     uploadFiles(*args)
     pass
 
-ttk.Button(mainframe, text="Submit", command=submit).grid(column=3, row=7, sticky=W)
+ttk.Button(manual_frame, text="Submit", command=submit).grid(column=3, row=7, sticky=W)
 
 
 
@@ -198,7 +325,7 @@ def wipeSDWindow(mydir):
 
 # feet_entry.grid(column=1, row=1, sticky=(W, E))
 
-for child in mainframe.winfo_children():
+for child in manual_frame.winfo_children():
     child.grid_configure(padx=5, pady=5)
 
 feet_entry.focus()

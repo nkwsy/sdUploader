@@ -1,0 +1,6 @@
+Babel==2.12.1
+loguru==0.7.0
+Pillow==10.0.0
+psutil==5.9.5
+python-dotenv==1.0.0
+tkcalendar==1.6.1

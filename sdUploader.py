@@ -23,9 +23,14 @@ logger.add("sdUploader.log", rotation="5 MB")
 load_dotenv()
 
 # Set default values
-#TODO Use PSUTIL to get to this folder automaticly
-#TODO get EXIF data to create folders based on dates, allow user to manually override
-#TODO get EXIF data to determine camera type
+#DONE Use PSUTIL to get to this folder automaticly
+#TODO get EXIF data to 
+#TODO create folders based on dates, allow user to manually override date
+#TODO organize camera traps differently
+#TODO check if data is properly uploaded 
+#TODO Handle MISC files and non-media stuff. Determine what misc stuff is needed for certain cameras IE DJI, insta360 Cannon
+#TODO Handle duplacate filenames for large folders, IE folders over 1000 repeating names DJI_001 to something better
+#DONE get EXIF data to determine camera type
 #TODO Use Dronedeploy api to pull mission data and compare GPS coordinates of photos to automaticly sort into folder based on flight
 
 
@@ -127,6 +132,7 @@ def parse_date(date_string):
 
 ############# SD drive util
 
+    
 def is_sdX_device(device_string):
     match = re.match(r'/dev/sd[a-z]', device_string)
     return match is not None
@@ -136,14 +142,57 @@ def check_sd():
     devices = []
     for drive in dp:
         device = drive.device
-        mountpoint = drive.mountpoint
-        device_usage = psutil.disk_usage(mountpoint)
-        device_size = f'{device_usage.total / (1024 **3)}GB'
-        device_used = f'{device_usage.used/ (1024 **3)}GB'
+        # mountpoint = drive.mountpoint
         if is_sdX_device(device):
-            devices.append({'device': device, 'mountpoint': mountpoint, 'device_size': device_size, 'device_used': device_used})
+            devices.append(SdXDevice(drive))
     return devices
 
+class SdXDevice:
+    def __init__(self,disk_partition) -> None:
+        print(disk_partition)
+        self.dp = disk_partition
+        self.device = self.dp.device
+        self.mountpoint = self.dp.mountpoint
+        self.device_usage = psutil.disk_usage(self.mountpoint)
+        self.size = self.check_mount_size()
+        self.used = self.check_mount_used()
+        self.free = self.check_mount_free()
+        self.percent = self.check_mount_percent()
+        self.files = None
+        self.fstype = None
+        pass
+
+
+    def check_mount_size(self):
+        device_size = round(self.device_usage.total / (1024.0 **3),2)
+        return device_size
+    
+    def check_mount_used(self):
+        device_used = round(self.device_usage.used/(1024.0 **3),2)
+        return device_used
+    
+    def check_mount_free(self):
+        device_free = round(self.device_usage.free/(1024.0 **3),2)
+        return device_free
+    
+    def check_mount_percent(self):
+        device_percent = round(self.device_usage.percent,2)
+        return device_percent
+    
+    def check_mount_files(self):
+        file_locations = []
+        for root, dirs, files in os.walk(self.mountpoint):
+            for file in files:
+                file_location = os.path.join(root, file)
+                file_locations.append(file_location)
+                print(dirs)
+        return file_locations
+
+
+
+        # {'mountpoint': mountpoint, 
+        #         'device_size_in_gb': device_size, 
+        #         'device_used_in_gb': device_used}
 
 def return_files_in_sd_card(dir_path):
     file_locations = []
@@ -233,9 +282,11 @@ def browse_button():
 progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, length=max, mode='determinate')
 #### Auto upload frame
 #File Directory
+#TODO pull SD card info automaticly from list of SD cards
 dir = StringVar()
+sd_cards = check_sd()
 ttk.Label(auto_frame, text="SD card").grid(column=0, row=6, sticky=W)
-ttk.Label(auto_frame, text=check_sd()).grid(column=2, row=2, sticky=W)
+ttk.Label(auto_frame, text=f"{[x.size if x in sd_cards else None for x in sd_cards]}").grid(column=2, row=2, sticky=W)
 
 sd_entry = ttk.Combobox(auto_frame, textvariable=dir,
    values=(check_sd()))

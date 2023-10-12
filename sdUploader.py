@@ -61,7 +61,6 @@ def get_files_in_folder(dir):
     #Filter for raw extension
     selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
     return selected_files
-
 def copy_directory_contents(src_dir, dst_dir):
     # Ensure destination directory exists
     if not os.path.exists(dst_dir):
@@ -76,48 +75,8 @@ def copy_directory_contents(src_dir, dst_dir):
             shutil.copytree(src_item, dst_item)
         else:
             shutil.copy2(src_item, dst_item)
-
 # pass camera, dateEntry/date, location, file_list, info, 
 def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
-    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    base_folder = f"{home_folder}{camera}"
-    print(date)
-    print(type(date))
-    today = datetime.now()
-    folder_name = f"{today.strftime('%Y-%m-%d')}"
-    year_folder = f"{date.year}"
-    # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-    folder_name = folder_name.strip()
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    output_folder = os.path.join(base_folder, year_folder, folder_name)
-    #Create output folder
-    try:
-        os.makedirs(output_folder)
-        logger.info(f'created output folder {output_folder}')
-    except FileExistsError as exists:
-        print('Folder exists:', exists.filename)
-        print('Using existing folder...')
-    #Copy files
-    #Progress bar
-    n_files = len(file_list)
-    logger.info(f'Copying {n_files} files to {output_folder}')
-    printProgressBar(0, n_files)
-    for i, file_name in enumerate(file_list):
-        printProgressBar(i+1, n_files)
-        try:
-            shutil.copy2(os.path.join( file_name), output_folder)
-        except Exception as err:
-            logger.error(err)
-    textFile = output_folder + '/info.txt'
-    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
-    print(info)
-    with open(textFile, 'w') as f:
-        f.write(info)
-    logger.info('Finished uploading files!')
-    pass
-
-#### Download files to local directory
-def downloadFiles(camera=None, date=None, location='', notes='', file_list=None):
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
     print(date)
@@ -146,6 +105,47 @@ def downloadFiles(camera=None, date=None, location='', notes='', file_list=None)
             shutil.copy2(os.path.join( file_name), output_folder)
         except Exception as err:
             logger.error(err)
+    textFile = output_folder + '/info.txt'
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    print(info)
+    with open(textFile, 'w') as f:
+        f.write(info)
+    logger.info('Finished uploading files!')
+    pass
+
+#### Download files to local directory
+def downloadFiles(mount_point=None, date=None, location='', notes='', file_list=None):
+        #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+    base_folder = f"{home_folder}{camera}"
+    file_list = return_files_in_sd_card(mount_point)
+    today = datetime.now()
+    folder_name = f"{today.strftime('%Y-%m-%d')}"
+    folder_name = folder_name.strip()
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    output_folder = os.path.join(current_directory,'temp', folder_name)
+    #Create output folder
+    try:
+        os.makedirs(output_folder)
+        logger.info(f'created output folder {output_folder}')
+    except FileExistsError as exists:
+        print('Folder exists:', exists.filename)
+        print('Using existing folder...')
+    #Copy files
+    #Progress bar
+    n_files = len(file_list)
+    logger.info(f'Copying {n_files} files to {output_folder}')
+    printProgressBar(0, n_files)
+    for i, file_name in enumerate(file_list):
+        printProgressBar(i+1, n_files)
+        try:
+            shutil.copy2(os.path.join( file_name), output_folder)
+        except Exception as err:
+            logger.error(err)
+    textFile = output_folder + '/info.txt'
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    print(info)
+    with open(textFile, 'w') as f:
+        f.write(info)
     logger.info('Finished uploading files!')
     pass
 ############## EXIF file stuff

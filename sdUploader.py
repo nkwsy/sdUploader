@@ -17,6 +17,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import re
 import psutil
+from exiftool import ExifToolHelper
 
 logger.add(sys.stderr, level="INFO")
 logger.add("sdUploader.log", rotation="5 MB")
@@ -44,16 +45,84 @@ home_folder = os.getenv("HOME_FOLDER") # example: '/media/mycard/disk/DCIM/'4
 # home_folder = os.path.join('/home/',os.environ.get('USER'),'/MediaBackup')
 # logger.info(sd_photo_folder, home_folder)
 
-# Progress bar
-def printProgressBar(value, max):
-    phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
-    progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, maximum=max, mode='determinate')
-    progress.grid(column=1, row=8, sticky=(W, E))
-    ttk.Label(manual_frame, text=phrase).grid(column=2, row=8, sticky=W)
-    progress['value'] = value
-    progress.update()
-    logger.info(value)
-    pass
+exif_tags_to_extract = [
+    # Basic Device Info
+    "Make",
+    "Model",
+    "CameraSerialNumber",
+
+    # Software/Firmware Details
+    "Software",
+    "Firmware",
+
+    # Lens Information
+    "LensMake",
+    "LensModel",
+    "LensSerialNumber",
+
+    # Specialized Camera Fields
+    "CameraType",
+    "CameraOwnerName",
+
+    # Contextual Tags
+    "FileSource",
+    "SceneType",
+    "ImageHistory",
+
+    # GPS/Location Data
+    "GPSLatitude",
+    "GPSLongitude",
+    "GPSAltitude",
+    "GPSSpeed",
+    "GPSImgDirection",
+
+    # Drone-specific Tags
+    "FlightID",
+    "FlightNumber",
+    "DronePitch",
+    "DroneYaw",
+    "DroneRoll",
+
+    # Miscellaneous
+    "OwnerName",
+    "UserComment",
+    "UniqueCameraModel",
+    "DeviceSettingDescription",
+
+    # IPTC Data
+    "By-line",
+    "By-lineTitle",
+
+    # XMP Data
+    "CreatorTool",
+    "HistorySoftwareAgent",
+
+    # Special Tags
+    "Rating",
+    "ImageUniqueID",
+
+    # Extended Info
+    "MakerNote"
+]
+
+#list of exif make data
+exif_makes = {
+    'Trailcam': ['Browning', 'Bushnell', 'Moultrie', 'Stealth Cam', 'Wildgame Innovations', 'BS680BWNx02126'],
+    'DSLR': ['Canon', 'Nikon', 'Sony', 'Pentax', 'Fujifilm', 'Olympus', 'Panasonic', 'Leica'],
+    'Drone': ['DJI', 'Parrot', 'Yuneec', 'Autel Robotics', 'Hasselblad'],
+    'GoPro': ['GoPro'],
+    '360Camera': ['Ricoh', 'Insta360', 'GoPro', 'Samsung']
+}
+
+
+def delete_contents_of_dir(directory_path):
+    """Delete all contents of a directory without deleting the directory itself."""
+    for item in os.listdir(directory_path):
+        item_path = os.path.join(directory_path, item)
+        if os.path.isdir(item_path):
+            shutil.rmtree(item_path)
+        else:
+            os.remove(item_path)
 
 def get_files_in_folder(dir):
     file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
@@ -61,11 +130,27 @@ def get_files_in_folder(dir):
     #Filter for raw extension
     selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
     return selected_files
+
+def create_temp_folder():
+    today = datetime.now()
+    folder_name = f"{today.strftime('%Y-%m-%d_%H-%M-%S')}"
+    folder_name = folder_name.strip()
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    output_folder = os.path.join(current_directory,'temp', folder_name)
+    #Create output folder
+    try:
+        os.makedirs(output_folder)
+        logger.info(f'created output folder {output_folder}')
+    except FileExistsError as exists:
+        print('Folder exists:', exists.filename)
+        print('Using existing folder...')
+    return output_folder
+
 def copy_directory_contents(src_dir, dst_dir):
     # Ensure destination directory exists
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
-    
+    logger.info(f'Copying files from {src_dir} to {dst_dir}')
     for item in os.listdir(src_dir):
         src_item = os.path.join(src_dir, item)
         dst_item = os.path.join(dst_dir, item)
@@ -75,7 +160,77 @@ def copy_directory_contents(src_dir, dst_dir):
             shutil.copytree(src_item, dst_item)
         else:
             shutil.copy2(src_item, dst_item)
-# pass camera, dateEntry/date, location, file_list, info, 
+
+def start_copy(src_dir):
+    # Create temporary folder
+    temp_dir = create_temp_folder()
+    
+    # Copy files to temporary folder
+    copy_directory_contents(src_dir, temp_dir)
+    
+    # Return temporary folder path
+    return temp_dir
+
+def get_upload_progress(src_dir, dst_dir):
+    # Get total size of source directory
+    total_size = get_directory_size(src_dir)
+    
+    # Get size of files already copied
+    copied_size = get_directory_size(dst_dir)
+    
+    # Calculate progress
+    progress = copied_size / total_size
+    logger.info(f'Progress download: {progress}, copied/total: {copied_size} / {total_size}')
+    return {'progress_percent': progress, 'copied_size': copied_size, 'total_size': total_size}
+
+def get_directory_size(directory):
+    total = 0
+    with os.scandir(directory) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_directory_size(entry.path)
+    return total
+# pass camera, dateEntry/date, location, file_list, info,
+# 
+def simple_upload_files(src_dir, camera_info):
+    camera = camera_info.get('camera', 'to_be_sorted')
+    date = camera_info.get('date', datetime.now())
+    location = camera_info.get('location', '')
+    notes = camera_info.get('notes', '')
+    file_list = camera_info.get('file_list', None)
+    info = camera_info.get('info', '')
+    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+    base_folder = f"{home_folder}{camera}"
+    print(date)
+    print(type(date))
+    folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"
+    today = datetime.now()
+    year_folder = f"{date.year}"
+    # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
+    folder_name = folder_name.strip()
+    output_folder = os.path.join(base_folder, year_folder, folder_name)
+    #Create output folder
+    try:
+        os.makedirs(output_folder)
+        logger.info(f'created output folder {output_folder}')
+    except FileExistsError as exists:
+        print('Folder exists:', exists.filename)
+        print('Using existing folder...')
+    #Copy files
+    #Progress bar
+    logger.info(f'Copying files to {output_folder}')
+    copy_directory_contents(src_dir, output_folder)
+    textFile = output_folder + '/info.txt'
+    file_list = get_files_in_folder(src_dir)
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    print(info)
+    with open(textFile, 'w') as f:
+        f.write(info)
+    logger.info('Finished uploading files!')
+    pass
+
 def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
@@ -98,9 +253,7 @@ def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
     #Progress bar
     n_files = len(file_list)
     logger.info(f'Copying {n_files} files to {output_folder}')
-    printProgressBar(0, n_files)
     for i, file_name in enumerate(file_list):
-        printProgressBar(i+1, n_files)
         try:
             shutil.copy2(os.path.join( file_name), output_folder)
         except Exception as err:
@@ -117,9 +270,9 @@ def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
 def downloadFiles(mount_point=None, date=None, location='', notes='', file_list=None):
         #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
-    file_list = return_files_in_sd_card(mount_point)
+    file_list = get_files_in_sd_card(mount_point)
     today = datetime.now()
-    folder_name = f"{today.strftime('%Y-%m-%d')}"
+    folder_name = f"{today.strftime('%Y-%m-%d_%H-%M-%S')}"
     folder_name = folder_name.strip()
     current_directory = os.path.dirname(os.path.abspath(__file__))
     output_folder = os.path.join(current_directory,'temp', folder_name)
@@ -134,50 +287,58 @@ def downloadFiles(mount_point=None, date=None, location='', notes='', file_list=
     #Progress bar
     n_files = len(file_list)
     logger.info(f'Copying {n_files} files to {output_folder}')
-    printProgressBar(0, n_files)
-    for i, file_name in enumerate(file_list):
-        printProgressBar(i+1, n_files)
-        try:
-            shutil.copy2(os.path.join( file_name), output_folder)
-        except Exception as err:
-            logger.error(err)
-    textFile = output_folder + '/info.txt'
-    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
-    print(info)
-    with open(textFile, 'w') as f:
-        f.write(info)
+    # printProgressBar(0, n_files)
+    # for i, file_name in enumerate(file_list):
+    #     printProgressBar(i+1, n_files)
+    #     try:
+    #         shutil.copy2(os.path.join( file_name), output_folder)
+    #     except Exception as err:
+    #         logger.error(err)
+    # textFile = output_folder + '/info.txt'
+    # info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    # print(info)
+    # with open(textFile, 'w') as f:
+    #     f.write(info)
     logger.info('Finished uploading files!')
     pass
 ############## EXIF file stuff
+def get_metadata(file_path, tags=['Make', 'Model', 'CameraType', 'MakerNote','MIMEType', 'Software', 'DateTimeOriginal']):
+    """Retrieve metadata for any media type."""
+    try:
+        with ExifToolHelper() as et:
+            logger.info(f'Getting metadata for {file_path}')
+            metadata = et.get_tags(file_path, tags)
+    except Exception as e:
+        logger.error(e)
+        return None
+    return metadata[0]
+
 def handle_exif_data(img_path):
     try:
-        image = Image.open(img_path)
-        exifdata = image._getexif()
+        metadata = get_metadata(img_path)
+        # image = Image.open(img_path)
+        # exifdata = image._getexif()   
+        print(metadata)    
+        exifdata = metadata
     except:
         return None
     tags = {}
     if not exifdata:
         return None
-    for tag_id, value in exifdata.items():
-        tag = TAGS.get(tag_id, tag_id)
-        tags[tag] = value
-    return tags
+    # for tag_id, value in exifdata.items():
+    #     tag = TAGS.get(tag_id, tag_id)
+    #     tags[tag] = value
+    # return tags
         # if tag == 'Make' or tag == 'Model':
         #     print(f"{tag}: {value}")
 
-#list of exif make data
-exif_makes = {
-    'Trailcam': ['Browning', 'Bushnell', 'Moultrie', 'Stealth Cam', 'Wildgame Innovations'],
-    'DSLR': ['Canon', 'Nikon', 'Sony', 'Pentax', 'Fujifilm', 'Olympus', 'Panasonic', 'Leica'],
-    'Drone': ['DJI', 'Parrot', 'Yuneec', 'Autel Robotics', 'Hasselblad'],
-    'GoPro': ['GoPro'],
-    '360Camera': ['Ricoh', 'Insta360', 'GoPro', 'Samsung']
-}
+
 
 #TODO Check if exif standardizes date info
 def parse_date(date_string):
+    if date_string is None:
+        return None
     return datetime.strptime(date_string, '%Y:%m:%d %H:%M:%S')
-
 ############# SD drive util
 
     
@@ -193,6 +354,7 @@ def check_sd():
         # mountpoint = drive.mountpoint
         if is_sdX_device(device):
             devices.append(SdXDevice(drive))
+            print(device)
     return devices
 
 class SdXDevice:
@@ -209,7 +371,17 @@ class SdXDevice:
         self.files = None
         self.fstype = None
         pass
-
+    
+    def get_file_info(self):
+        self.update_range = get_modification_range(path=self.mountpoint)
+        self.newest_file = self.update_range['latest_image']
+        self.oldest_file = self.update_range['earliest_image']
+        self.all_image_info = get_all_image_info(self.mountpoint)
+        self.camera_types = self.all_image_info['cameras_used']
+        self.image_count = self.all_image_info['image_count']
+        self.images = self.all_image_info['images']
+        self.non_images = self.all_image_info['non_images']
+        print(self.all_image_info)
 
     def check_mount_size(self):
         device_size = round(self.device_usage.total / (1024.0 **3),2)
@@ -236,13 +408,37 @@ class SdXDevice:
                 print(dirs)
         return file_locations
 
-
+    def check_last_updated_date(self):
+        # Get the timestamp of the last modification
+        timestamp = os.path.getmtime(self.mountpoint)
+        # Convert the timestamp into a readable format
+        date = datetime.datetime.fromtimestamp(timestamp)
+        return date
 
         # {'mountpoint': mountpoint, 
         #         'device_size_in_gb': device_size, 
         #         'device_used_in_gb': device_used}
 
-def return_files_in_sd_card(dir_path):
+def get_modification_range(path):
+    """
+    Return the most recent modification date found in the path directory or any of its sub-directories.
+    """
+    latest_time = os.path.getmtime(path)  # Initialize with the current directory's modification time
+    latest_datetime = datetime.fromtimestamp(latest_time)
+    earliest_time = os.path.getmtime(path)
+    earliest_datetime = latest_datetime
+    for root, _, files in os.walk(path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.getmtime(file_path) > latest_time:
+                latest_time = os.path.getmtime(file_path)
+                latest_datetime = datetime.fromtimestamp(latest_time)
+            if os.path.getmtime(file_path) < earliest_time:
+                earliest_time = os.path.getmtime(file_path)
+                earliest_datetime = datetime.fromtimestamp(earliest_time)
+    return {'earliest_image': earliest_datetime, 'latest_image': latest_datetime}
+
+def get_files_in_sd_card(dir_path):
     file_locations = []
     for root, dirs, files in os.walk(dir_path):
         for file in files:
@@ -259,23 +455,31 @@ def print_files_in_dir(dir_path):
     return file_locations
 
 def get_camera_type(make):
-    make = make.replace('\x00', '').strip()
+    # make = make.replace('\x00', '').strip()
     for camera_type, makes in exif_makes.items():
-        if make in makes:
+        if set(make.values()) & set(makes):
             return camera_type
+    return 'Unknown'
+
+def get_only_tag(data, keyword):
+    for key, value in data.items():
+        if keyword in key:
+            return value
     return None
 
 def get_image_info(img_path):
-    exif_data = handle_exif_data(img_path)
+    exif_data = get_metadata(img_path)
+    print(exif_data)
     if exif_data is None:
         return None
-    make = exif_data.get('Make')
-    date = exif_data.get('DateTimeOriginal')
-    camera_type = get_camera_type(make)
-    return {'date': parse_date(date), 'make': make, 'file': img_path, 'camera_type': camera_type}
+    make = get_only_tag(exif_data, 'Make')
+    date = get_only_tag(exif_data, 'DateTimeOriginal')
+    mediatype = get_only_tag(exif_data, 'MIMEType')
+    camera_type = get_camera_type(exif_data)
+    return {'date': parse_date(date), 'make': make, 'file': img_path, 'camera_type': camera_type, 'mediatype': mediatype, 'SourceFile': img_path}
 
 def get_all_image_info(mount_point):
-    files = return_files_in_sd_card(mount_point)
+    files = get_files_in_sd_card(mount_point)
     all_images = []
     non_images = []
     for x in files:
@@ -284,155 +488,9 @@ def get_all_image_info(mount_point):
             all_images.append(f_info)
         else:
             non_images.append(x)
-    return {'images': all_images, 'non_images':non_images }
+    cameras_used = set([x['camera_type'] for x in all_images])
+    image_count = len(all_images)
+    return {'images': all_images, 'non_images':non_images, 'cameras_used':cameras_used, 'image_count':image_count }
 
-
-############## GUI
-# root = Tk()
-root = tk.Tk()
-
-root.title("SD card uploader")
-
-navbar = ttk.Notebook(root)
-tab1 = ttk.Frame(navbar)
-tab2 = ttk.Frame(navbar)
-navbar.add(tab1, text="Auto Upload")
-navbar.add(tab2, text="Manual Upload")
-navbar.pack(expand=1, fill="both")
-
-auto_frame = ttk.Frame(tab1, padding="3 3 12 12")
-auto_frame.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-
-manual_frame = ttk.Frame(tab2, padding="3 3 12 12")
-manual_frame.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
-
-# mainframe = ttk.Frame(root, padding="3 3 12 12")
-# mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
-# root.columnconfigure(0, weight=1)
-# root.rowconfigure(0, weight=1)
-
-feet = StringVar()
-feet_entry = ttk.Entry(manual_frame, width=7, textvariable=feet)
-feet_entry.grid(column=1, row=1, sticky=(W, E))
-
-meters = StringVar()
-ttk.Label(manual_frame, textvariable=meters).grid(column=1, row=2, sticky=(W, E))
-
-
-def browse_button():
-    filename = fd.askdirectory(initialdir= sd_photo_folder)
-    print(filename)
-    dir.set(filename)
-
-progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, length=max, mode='determinate')
-
-
-ttk.Button(manual_frame, text="Submit", command=submit).grid(column=3, row=7, sticky=W)
-
-#### Auto upload frame
-#File Directory
-#TODO pull SD card info automaticly from list of SD cards
-dir = StringVar()
-sd_cards = check_sd()
-ttk.Label(auto_frame, text="SD card").grid(column=0, row=6, sticky=W)
-ttk.Label(auto_frame, text=f"{[x.size if x in sd_cards else None for x in sd_cards]}").grid(column=2, row=2, sticky=W)
-
-sd_entry = ttk.Combobox(auto_frame, textvariable=dir,
-   values=(check_sd()))
-sd_entry.grid(column=1, row=2, sticky=(W, E))
-
-ttk.Button(auto_frame, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
-ttk.Label(auto_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
-
-#TODO make this a class
-#### Manual upload frame
-# Ranger Name
-name = StringVar()
-ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
-ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-nameEntry = ttk.Entry(manual_frame, width=7, textvariable=name)
-nameEntry.grid(column=1, row=1, sticky=(W, E))
-
-# Camera Type
-camera = StringVar()
-ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
-ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
-cameraEntry = ttk.Combobox(manual_frame, textvariable=camera,
-   values=('Drone', 'UnderwaterGoPro', 'GoPro' , 'CameraTrap'))
-cameraEntry.grid(column=1, row=2, sticky=(W, E))
-
-# Date Entry
-date = StringVar()
-ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
-dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=date)
-dateEntry.grid(column=1, row=3, sticky=(W, E))
-
-# Location
-location = StringVar()
-ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
-nameEntry = ttk.Entry(manual_frame, width=7, textvariable=location)
-nameEntry.grid(column=1, row=4, sticky=(W, E))
-
-#File Directory
-dir = StringVar()
-ttk.Label(manual_frame, text="image folder").grid(column=0, row=6, sticky=W)
-ttk.Button(manual_frame, text="Select image folder", command=browse_button).grid(column=1, row=6, sticky=W)
-ttk.Label(manual_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
-
-print(dir)
-# dirEntry.grid(column=1, row=6, sticky=(W, E))
-
-# root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-# notes
-notes = StringVar()
-ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
-nameEntry = ttk.Entry(manual_frame, width=19, textvariable=notes)
-nameEntry.grid(column=1, row=5, sticky=(W, E))
-
-# # Delete after upload
-# wipeSD = BooleanVar(value=True)
-# wipeSDEntry = ttk.Checkbutton(mainframe, text='Wipe SD after upload',
-# 	    variable=wipeSD)
-
-# Submit
-def submit():
-    # mainFolder =  'home_folder' + str(camera.get())+ ''.join(args)
-    # folderNameYear = str(dateEntry.get_date().year)
-    # subfolder_name = dateEntry.get_date().strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-    print(notes.get())
-    # args = {'camera':camera.get(), 'date':dateEntry.get_date(), 'location': location.get(), 'notes': notes.get(),'file_list': get_files_in_folder(dir.get())}
-    uploadFiles(camera.get(), dateEntry.get_date(),  location.get(), notes.get(), get_files_in_folder(dir.get()))
-    wipeSDWindow(dir)
-    pass
-
-ttk.Button(manual_frame, text="Submit", command=submit).grid(column=3, row=7, sticky=W)
-
-
-
-# wipeSD wipeSD window
-def wipeSDWindow(mydir):
-    result = messagebox.askyesno(
-        message='Would you like to Wipe the SD card?',
-        icon='question', title='Wipe SD Card', detail='Verify all files are copied correctly. If this is true please wipe card for next user')
-    if result:
-        try:
-            shutil.rmtree(mydir)
-        except OSError as e:
-            logger.error("Error: %s - %s." % (e.filename, e.strerror))
-        pass
-
-# feet_entry.grid(column=1, row=1, sticky=(W, E))
-
-for child in manual_frame.winfo_children():
-    child.grid_configure(padx=5, pady=5)
-
-feet_entry.focus()
-root.bind("<Return>", submit)
-
-root.mainloop()
 
 #!/usr/bin/env python3

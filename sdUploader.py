@@ -194,7 +194,13 @@ def get_directory_size(directory):
     return total
 # pass camera, dateEntry/date, location, file_list, info,
 # 
-def simple_upload_files(src_dir, camera=None, date=None, location='', notes='', file_list=None):
+def simple_upload_files(src_dir, camera_info):
+    camera = camera_info.get('camera', 'to_be_sorted')
+    date = camera_info.get('date', datetime.now())
+    location = camera_info.get('location', '')
+    notes = camera_info.get('notes', '')
+    file_list = camera_info.get('file_list', None)
+    info = camera_info.get('info', '')
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
     print(date)
@@ -214,10 +220,10 @@ def simple_upload_files(src_dir, camera=None, date=None, location='', notes='', 
         print('Using existing folder...')
     #Copy files
     #Progress bar
-    n_files = len(file_list)
     logger.info(f'Copying files to {output_folder}')
     copy_directory_contents(src_dir, output_folder)
     textFile = output_folder + '/info.txt'
+    file_list = get_files_in_folder(src_dir)
     info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
     print(info)
     with open(textFile, 'w') as f:

@@ -17,38 +17,7 @@ def start_download(src, dst):
     thread.start()
     return thread
 
-def data_entry(manual_frame):
-    name = StringVar()
-    ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
-    ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=name)
-    nameEntry.grid(column=1, row=1, sticky=(W, E))
 
-    # Camera Type
-    camera = StringVar()
-    ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
-    ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
-    cameraEntry = ttk.Combobox(manual_frame, textvariable=camera,
-    values=('360Camera', 'Drone', 'GoPro' , 'CameraTrap', 'DSLR','UnderwaterGoPro', 'Mixed', 'Other'))
-    cameraEntry.grid(column=1, row=2, sticky=(W, E))
-
-    # Date Entry
-    date = StringVar()
-    ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
-    dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=date)
-    dateEntry.grid(column=1, row=3, sticky=(W, E))
-
-    # Location
-    location = StringVar()
-    ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-    ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=location)
-    nameEntry.grid(column=1, row=4, sticky=(W, E))
-
-    notes = StringVar()
-    ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=19, textvariable=notes)
-    nameEntry.grid(column=1, row=5, sticky=(W, E))
 
 
 
@@ -84,7 +53,7 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
 
-        self.create_manual_upload_frame()
+        # self.create_manual_upload_frame()
 
 
     def printProgressBar(self, value, max):
@@ -165,11 +134,70 @@ class SDCardUploaderGUI:
         """Handle the drive selection and display the upload confirmation."""
         print(f"Selected drive: {drive.device}")
         self.drive = drive
-        self.upload_confirmation(self.drive)
+        # self.upload_confirmation(self.drive)
+        self.create_data_entry(self.master)
     
     def turn_red(self, event):
         event.widget["activeforeground"] = "red"
-    
+
+    def create_data_entry(self, master):
+        # Create a container frame
+        entry_frame = tk.Frame(self.master)
+        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E)
+        # Create a LabelFrame for the confirmation embedded in the container frame
+        self.entry_window = ttk.LabelFrame(entry_frame, text='Upload Progress')
+        self.entry_window.grid(pady=20, padx=10)
+        self.data_entry(self.entry_window)
+        
+    def data_entry(self, manual_frame):
+        self.photograher = StringVar()
+        ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
+        ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
+        nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photograher)
+        nameEntry.grid(column=1, row=1, sticky=(W, E))
+
+        # Camera Type
+        self.camera = StringVar()
+        ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
+        ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
+        cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera,
+        values=('360Camera', 'Drone', 'GoPro' , 'CameraTrap', 'DSLR','UnderwaterGoPro', 'Mixed', 'Other'))
+        cameraEntry.grid(column=1, row=2, sticky=(W, E))
+
+        # Date Entry
+        self.date = StringVar()
+        ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
+        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
+        self.dateEntry.grid(column=1, row=3, sticky=(W, E))
+
+        # Location
+        self.location = StringVar()
+        ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
+        ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
+        nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.location)
+        nameEntry.grid(column=1, row=4, sticky=(W, E))
+
+        self.notes = StringVar()
+        ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
+        nameEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
+        nameEntry.grid(column=1, row=5, sticky=(W, E))
+
+        submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
+        submit_button.grid(row=7, column=1, padx=10, pady=10)
+
+
+    def submit_form(self):
+        self.data_entry_info = {'photographer':self.photograher.get(),
+                                'camera':self.camera.get(), 
+                                'date':self.dateEntry.get_date(), 
+                                'location': self.location.get(), 
+                                'notes': self.notes.get(),
+                                # 'file_list': sd.get_files_in_folder(dir.get())
+                                }
+        print(self.data_entry_info)
+        self.upload_confirmation(self.drive)
+
+
     def upload_confirmation(self, drive):
         """Displays a confirmation box with a progress bar and estimated upload time."""
 
@@ -188,7 +216,6 @@ class SDCardUploaderGUI:
 
         tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?").pack(pady=10)
         self.download_time = tk.Label(confirm_window, text=f"Estimated download time: {estimated_time} minutes").pack(pady=10)
-
         # Progress bar setup
         self.progress_text = tk.StringVar()
         self.progress_text.set("0%")
@@ -196,10 +223,10 @@ class SDCardUploaderGUI:
         self.progress.pack(pady=20)
 
         # A confirmation button to start the "upload"
-        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_upload(estimated_time_seconds))
+        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download(estimated_time_seconds))
         self.confirm_btn.pack(pady=10)
 
-    def start_upload(self, estimated_time_seconds):
+    def start_card_download(self, estimated_time_seconds):
         """Simulates the upload process by updating the progress bar."""
         self.confirm_btn.config(state=tk.DISABLED)
         self.temp_folder = sd.create_temp_folder()
@@ -228,7 +255,11 @@ class SDCardUploaderGUI:
             logger.info("Upload completed!")
             self.progress_text.set("100%")
             self.wipeSDWindow(self.drive.mountpoint)
-
+            self.download_complete()
+            
+    def download_complete(self):
+        sd.simple_upload_files(self.temp_folder, self.data_entry_info)
+        
     # def start_upload(self, estimated_time_seconds):
     #     """Simulates the upload process by updating the progress bar."""
     #     self.temp_folder = sd.create_temp_folder()
@@ -250,15 +281,15 @@ class SDCardUploaderGUI:
         dir.set(filename)
 
 
-    def submit(self):
-        # mainFolder =  'home_folder' + str(camera.get())+ ''.join(args)
-        # folderNameYear = str(dateEntry.get_date().year)
-        # subfolder_name = dateEntry.get_date().strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-        print(notes.get())
-        # args = {'camera':camera.get(), 'date':dateEntry.get_date(), 'location': location.get(), 'notes': notes.get(),'file_list': get_files_in_folder(dir.get())}
-        sd.uploadFiles(camera.get(), dateEntry.get_date(),  location.get(), notes.get(), sd.get_files_in_folder(dir.get()))
-        wipeSDWindow(dir)
-        pass
+    # def submit(self):
+    #     # mainFolder =  'home_folder' + str(camera.get())+ ''.join(args)
+    #     # folderNameYear = str(dateEntry.get_date().year)
+    #     # subfolder_name = dateEntry.get_date().strftime('%Y-%m-%d') + ' ' + ' '.join(args)
+    #     print(notes.get())
+    #     # args = {'camera':camera.get(), 'date':dateEntry.get_date(), 'location': location.get(), 'notes': notes.get(),'file_list': get_files_in_folder(dir.get())}
+    #     sd.uploadFiles(camera.get(), dateEntry.get_date(),  location.get(), notes.get(), sd.get_files_in_folder(dir.get()))
+    #     wipeSDWindow(dir)
+    #     pass
 
     def wipeSDWindow(self, mydir):
         # ... [The rest of the method remains unchanged]

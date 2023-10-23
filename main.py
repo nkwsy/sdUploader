@@ -17,6 +17,45 @@ def start_download(src, dst):
     thread.start()
     return thread
 
+def data_entry(manual_frame):
+    name = StringVar()
+    ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
+    ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
+    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=name)
+    nameEntry.grid(column=1, row=1, sticky=(W, E))
+
+    # Camera Type
+    camera = StringVar()
+    ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
+    ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
+    cameraEntry = ttk.Combobox(manual_frame, textvariable=camera,
+    values=('360Camera', 'Drone', 'GoPro' , 'CameraTrap', 'DSLR','UnderwaterGoPro', 'Mixed', 'Other'))
+    cameraEntry.grid(column=1, row=2, sticky=(W, E))
+
+    # Date Entry
+    date = StringVar()
+    ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
+    dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=date)
+    dateEntry.grid(column=1, row=3, sticky=(W, E))
+
+    # Location
+    location = StringVar()
+    ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
+    ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
+    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=location)
+    nameEntry.grid(column=1, row=4, sticky=(W, E))
+
+    notes = StringVar()
+    ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
+    nameEntry = ttk.Entry(manual_frame, width=19, textvariable=notes)
+    nameEntry.grid(column=1, row=5, sticky=(W, E))
+
+
+
+    # dirEntry.grid(column=1, row=6, sticky=(W, E))
+
+    # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+    # notes
 
 class SDCardUploaderGUI:
 
@@ -45,6 +84,8 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
 
+        self.create_manual_upload_frame()
+
 
     def printProgressBar(self, value, max):
         phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
@@ -56,6 +97,11 @@ class SDCardUploaderGUI:
         logger.info(value)
         pass
     
+    def create_manual_upload_frame(self):
+        manual_frame = ttk.LabelFrame(self.master, text='Simple Catagorization', padding=10)
+        manual_frame.grid(column=0, row=10, sticky=(tk.N, tk.W, tk.E, tk.S))
+        data_entry(manual_frame)
+
     def create_auto_upload_frame(self):
         # sd_cards = sd.check_sd()
         # create_drive_boxes(self.tab1, sd_cards)
@@ -130,7 +176,7 @@ class SDCardUploaderGUI:
         # Calculate estimated upload time
         # Converting GB to MB for the drive size and then estimating the time at 25MB/s
         estimated_time_seconds = (drive.size * 1024) / 25
-        estimated_time = timedelta(seconds=estimated_time_seconds).seconds
+        estimated_time = int(timedelta(seconds=estimated_time_seconds) / timedelta(minutes=1))
 
         # Create a container frame
         container_frame = tk.Frame(self.master)
@@ -141,7 +187,7 @@ class SDCardUploaderGUI:
         confirm_window.grid(pady=20, padx=10)
 
         tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?").pack(pady=10)
-        tk.Label(confirm_window, text=f"Estimated upload time: {estimated_time} seconds").pack(pady=10)
+        self.download_time = tk.Label(confirm_window, text=f"Estimated download time: {estimated_time} minutes").pack(pady=10)
 
         # Progress bar setup
         self.progress_text = tk.StringVar()
@@ -150,11 +196,12 @@ class SDCardUploaderGUI:
         self.progress.pack(pady=20)
 
         # A confirmation button to start the "upload"
-        confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_upload(estimated_time_seconds))
-        confirm_btn.pack(pady=10)
+        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_upload(estimated_time_seconds))
+        self.confirm_btn.pack(pady=10)
 
     def start_upload(self, estimated_time_seconds):
         """Simulates the upload process by updating the progress bar."""
+        self.confirm_btn.config(state=tk.DISABLED)
         self.temp_folder = sd.create_temp_folder()
         logger.info(f"Gui Starting upload from {self.drive.device} to {self.temp_folder}")
         self.upload_thread = start_download(self.drive.mountpoint, self.temp_folder)
@@ -168,11 +215,11 @@ class SDCardUploaderGUI:
         progress_value = sd.get_upload_progress(self.drive.mountpoint, self.temp_folder)
         
         # Update the progress bar
-        self.progress['value'] = progress_value
+        self.progress['value'] = progress_value['progress_percent']
         
         # Update the progress text
-        self.progress_text.set(f"{int(progress_value * 100)}%")
-        logger.info(f"Progress: {int(progress_value * 100)}%")
+        # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
+        logger.info(f"Progress: {int(progress_value['progress_percent'] * 100)}%")
 
         # Check if the upload thread is alive, if yes, continue updating
         if self.upload_thread.is_alive():
@@ -180,6 +227,7 @@ class SDCardUploaderGUI:
         else:
             logger.info("Upload completed!")
             self.progress_text.set("100%")
+            self.wipeSDWindow(self.drive.mountpoint)
 
     # def start_upload(self, estimated_time_seconds):
     #     """Simulates the upload process by updating the progress bar."""
@@ -219,10 +267,12 @@ class SDCardUploaderGUI:
             icon='question', title='Wipe SD Card', detail='Verify all files are copied correctly. If this is true please wipe card for next user')
         if result:
             try:
-                shutil.rmtree(mydir)
+                print(mydir)
+                sd.delete_contents_of_dir(mydir)
             except OSError as e:
                 logger.error("Error: %s - %s." % (e.filename, e.strerror))
             pass
+
     def create_file_tree(self):
         self.tree = ttk.Treeview(self.master)
         self.tree.heading('#0', text='Directory Structure')
@@ -278,50 +328,6 @@ if __name__ == "__main__":
 #TODO make this a class
 #### Manual upload frame
 # Ranger Name
-def data_entry():
-    name = StringVar()
-    ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
-    ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=name)
-    nameEntry.grid(column=1, row=1, sticky=(W, E))
-
-    # Camera Type
-    camera = StringVar()
-    ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
-    ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
-    cameraEntry = ttk.Combobox(manual_frame, textvariable=camera,
-    values=('Drone', 'UnderwaterGoPro', 'GoPro' , 'CameraTrap'))
-    cameraEntry.grid(column=1, row=2, sticky=(W, E))
-
-    # Date Entry
-    date = StringVar()
-    ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
-    dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=date)
-    dateEntry.grid(column=1, row=3, sticky=(W, E))
-
-    # Location
-    location = StringVar()
-    ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-    ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=7, textvariable=location)
-    nameEntry.grid(column=1, row=4, sticky=(W, E))
-
-    #File Directory
-    dir = StringVar()
-    ttk.Label(manual_frame, text="image folder").grid(column=0, row=6, sticky=W)
-    ttk.Button(manual_frame, text="Select image folder", command=self.browse_button).grid(column=1, row=6, sticky=W)
-    ttk.Label(manual_frame, text="Choose directory files are in. Most likely DCIM and the device folder (like Gopro101)").grid(column=2, row=6, sticky=W)
-
-    print(dir)
-    # dirEntry.grid(column=1, row=6, sticky=(W, E))
-
-    # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-    # notes
-    notes = StringVar()
-    ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
-    nameEntry = ttk.Entry(manual_frame, width=19, textvariable=notes)
-    nameEntry.grid(column=1, row=5, sticky=(W, E))
-
 # # Delete after upload
 # wipeSD = BooleanVar(value=True)
 # wipeSDEntry = ttk.Checkbutton(mainframe, text='Wipe SD after upload',

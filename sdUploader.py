@@ -115,6 +115,14 @@ exif_makes = {
 }
 
 
+def delete_contents_of_dir(directory_path):
+    """Delete all contents of a directory without deleting the directory itself."""
+    for item in os.listdir(directory_path):
+        item_path = os.path.join(directory_path, item)
+        if os.path.isdir(item_path):
+            shutil.rmtree(item_path)
+        else:
+            os.remove(item_path)
 
 def get_files_in_folder(dir):
     file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
@@ -173,7 +181,7 @@ def get_upload_progress(src_dir, dst_dir):
     # Calculate progress
     progress = copied_size / total_size
     logger.info(f'Progress download: {progress}, copied/total: {copied_size} / {total_size}')
-    return progress
+    return {'progress_percent': progress, 'copied_size': copied_size, 'total_size': total_size}
 
 def get_directory_size(directory):
     total = 0
@@ -184,7 +192,39 @@ def get_directory_size(directory):
             elif entry.is_dir():
                 total += get_directory_size(entry.path)
     return total
-# pass camera, dateEntry/date, location, file_list, info, 
+# pass camera, dateEntry/date, location, file_list, info,
+# 
+def simple_upload_files(src_dir, camera=None, date=None, location='', notes='', file_list=None):
+    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
+    base_folder = f"{home_folder}{camera}"
+    print(date)
+    print(type(date))
+    folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"
+    today = datetime.now()
+    year_folder = f"{date.year}"
+    # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
+    folder_name = folder_name.strip()
+    output_folder = os.path.join(base_folder, year_folder, folder_name)
+    #Create output folder
+    try:
+        os.makedirs(output_folder)
+        logger.info(f'created output folder {output_folder}')
+    except FileExistsError as exists:
+        print('Folder exists:', exists.filename)
+        print('Using existing folder...')
+    #Copy files
+    #Progress bar
+    n_files = len(file_list)
+    logger.info(f'Copying files to {output_folder}')
+    copy_directory_contents(src_dir, output_folder)
+    textFile = output_folder + '/info.txt'
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    print(info)
+    with open(textFile, 'w') as f:
+        f.write(info)
+    logger.info('Finished uploading files!')
+    pass
+
 def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
@@ -207,9 +247,7 @@ def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
     #Progress bar
     n_files = len(file_list)
     logger.info(f'Copying {n_files} files to {output_folder}')
-    printProgressBar(0, n_files)
     for i, file_name in enumerate(file_list):
-        printProgressBar(i+1, n_files)
         try:
             shutil.copy2(os.path.join( file_name), output_folder)
         except Exception as err:
@@ -260,8 +298,13 @@ def downloadFiles(mount_point=None, date=None, location='', notes='', file_list=
 ############## EXIF file stuff
 def get_metadata(file_path, tags=['Make', 'Model', 'CameraType', 'MakerNote','MIMEType', 'Software', 'DateTimeOriginal']):
     """Retrieve metadata for any media type."""
-    with ExifToolHelper() as et:
-        metadata = et.get_tags(file_path, tags)
+    try:
+        with ExifToolHelper() as et:
+            logger.info(f'Getting metadata for {file_path}')
+            metadata = et.get_tags(file_path, tags)
+    except Exception as e:
+        logger.error(e)
+        return None
     return metadata[0]
 
 def handle_exif_data(img_path):

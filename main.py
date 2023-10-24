@@ -32,6 +32,8 @@ class SDCardUploaderGUI:
         self.master = master
         self.master.title("SD card uploader")
 
+        # figure out if busy before shutdown
+        self.locked = False
         # Title Label with 90s Aesthetic
         titleLabel = tk.Label(self.master, text="SD Uploader", font=("Comic Sans MS", 24, "bold"), fg="purple")
         # titleLabel.pack(pady=20) # Adjust padding as needed
@@ -231,6 +233,7 @@ class SDCardUploaderGUI:
         self.confirm_btn.config(state=tk.DISABLED)
         self.temp_folder = sd.create_temp_folder()
         logger.info(f"Gui Starting upload from {self.drive.device} to {self.temp_folder}")
+        self.locked = True
         self.upload_thread = start_download(self.drive.mountpoint, self.temp_folder)
         
         # Start updating the progress in the GUI periodically (e.g., every 1 second)
@@ -254,42 +257,20 @@ class SDCardUploaderGUI:
         else:
             logger.info("Upload completed!")
             self.progress_text.set("100%")
+            self.locked = False
             self.wipeSDWindow(self.drive.mountpoint)
             self.download_complete()
             
     def download_complete(self):
+        self.locked = True
         sd.simple_upload_files(self.temp_folder, self.data_entry_info)
+        self.locked = False
         
-    # def start_upload(self, estimated_time_seconds):
-    #     """Simulates the upload process by updating the progress bar."""
-    #     self.temp_folder = sd.create_temp_folder()
-    #     logger.info(f"Gui Starting upload from {self.drive.device} to {self.temp_folder}")
-    #     start_download(self.drive.mountpoint, self.temp_folder)
-    #     # This is just for simulation. In a real-world scenario, you'll update the progress based on actual data upload progress.
-    #     upload_speed = 25  # MB/s
-    #     logger.info(f"Estimated time: {estimated_time_seconds} seconds")   
-    #     percentage = (sd.get_upload_progress(self.drive.mountpoint, self.temp_folder))
-    #     self.progress['value'] = sd.get_upload_progress(self.drive.mountpoint, self.temp_folder)
-    #     self.progress_text.set(f"{percentage}%")
-    #     logger.info(f"Progress: {percentage}%")
-    #     self.master.after(3000, self.progress.update())  # Update every second for demonstration.
-    #     self.master.after(3000, self.progress_text.update())
        
     def browse_button(self):
         filename = fd.askdirectory(initialdir= sd.sd_photo_folder)
         print(filename)
         dir.set(filename)
-
-
-    # def submit(self):
-    #     # mainFolder =  'home_folder' + str(camera.get())+ ''.join(args)
-    #     # folderNameYear = str(dateEntry.get_date().year)
-    #     # subfolder_name = dateEntry.get_date().strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-    #     print(notes.get())
-    #     # args = {'camera':camera.get(), 'date':dateEntry.get_date(), 'location': location.get(), 'notes': notes.get(),'file_list': get_files_in_folder(dir.get())}
-    #     sd.uploadFiles(camera.get(), dateEntry.get_date(),  location.get(), notes.get(), sd.get_files_in_folder(dir.get()))
-    #     wipeSDWindow(dir)
-    #     pass
 
     def wipeSDWindow(self, mydir):
         # ... [The rest of the method remains unchanged]
@@ -319,11 +300,47 @@ class SDCardUploaderGUI:
             else:
                 tree.insert(parent_node, "end", text=item)
 
+def on_closing(app_instance):
+    logger.info(f"Closing GUI: app_instance.locked = {app_instance.locked}")
+    root.withdraw()
+    if app_instance.locked == True:
+        logger.warning("Upload in progress, please wait")
+        time.sleep(10)
+    root.quit()
 
-if __name__ == "__main__":
+def start_gui():
+    global root
     root = tk.Tk()
+    root.protocol("WM_DELETE_WINDOW", lambda: on_closing(app))
+    # Rest of your GUI setup here...
     app = SDCardUploaderGUI(root)
     root.mainloop()
+
+def check_sd_loop():
+    old_sd_card = None
+    while True:
+        sd_card_check = sd.check_sd()
+        mounted_drive_check = [card.device for card in sd_card_check]
+        logger.info(f"Checking for SD cards: {mounted_drive_check}, old: {old_sd_card}")
+        if not sd_card_check:
+            print(sd_card_check)
+            print(type(sd_card_check))
+            old_sd_card = None
+            time.sleep(5)
+        elif mounted_drive_check == old_sd_card:
+            logger.info(f"Identical SD cards detected: {mounted_drive_check} == {old_sd_card}")
+            time.sleep(5)
+        else:
+            logger.info(f"Starting Gui, SD card detected: {mounted_drive_check}")
+            old_sd_card = [card.device for card in sd_card_check]
+            start_gui()
+
+if __name__ == "__main__":
+    check_sd_loop()
+    # sd_card_detected = check_sd_loop()
+    # if sd_card_detected:
+        # root = tk.Tk()
+        # root.mainloop()
 
 ############## GUI
 # root = Tk()

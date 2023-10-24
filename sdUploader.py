@@ -202,7 +202,8 @@ def simple_upload_files(src_dir, camera_info):
     file_list = camera_info.get('file_list', None)
     info = camera_info.get('info', '')
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    base_folder = f"{home_folder}{camera}"
+    base_folder = os.path.join(home_folder, camera)
+    logger.info(f'camera_info: {camera_info}. base_folder: {base_folder}')
     print(date)
     print(type(date))
     folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"

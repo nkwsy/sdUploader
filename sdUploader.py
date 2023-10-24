@@ -340,10 +340,11 @@ def parse_date(date_string):
         return None
     return datetime.strptime(date_string, '%Y:%m:%d %H:%M:%S')
 ############# SD drive util
-
+#TODO use mountpoint or something else to make sure you do not accidently mount important drive. 
     
 def is_sdX_device(device_string):
-    match = re.match(r'/dev/sd[a-z]', device_string)
+    # match = re.match(r'/dev/sd[a-z]', device_string)
+    match = re.match(r'/dev/sd[b-z]', device_string)
     return match is not None
 
 def check_sd():
@@ -351,7 +352,7 @@ def check_sd():
     devices = []
     for drive in dp:
         device = drive.device
-        # mountpoint = drive.mountpoint
+        mountpoint = drive.mountpoint
         if is_sdX_device(device):
             devices.append(SdXDevice(drive))
             print(device)

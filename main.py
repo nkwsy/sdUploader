@@ -17,10 +17,6 @@ def start_download(src, dst):
     thread.start()
     return thread
 
-
-
-
-
     # dirEntry.grid(column=1, row=6, sticky=(W, E))
 
     # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
@@ -119,12 +115,16 @@ class SDCardUploaderGUI:
             ttk.Label(drive_frame, text=f"Size: {drive.size} GB").grid(row=1, column=0, sticky=tk.W, pady=2)
             ttk.Label(drive_frame, text=f"Used: {drive.used} GB").grid(row=2, column=0, sticky=tk.W, pady=2)
             ttk.Label(drive_frame, text=f" {drive.percent} %").grid(row=2, column=0, sticky=tk.E, pady=2)
-            if extended_attributes == True:
-                drive.get_file_info()
-                ttk.Label(drive_frame, text=f"Filecount: {drive.image_count}").grid(row=1, column=0, sticky=tk.E, pady=2)
-                ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=2)
-                ttk.Label(drive_frame, text=f"Newest file: {drive.newest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
-                ttk.Label(drive_frame, text=f"Oldest file: {drive.oldest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
+            # if extended_attributes == True:
+            if extended_attributes:
+                # Start thread to get file info and then update the GUI
+                thread = threading.Thread(target=self.get_info_and_update_gui, args=(drive, drive_frame))
+                thread.start()              
+                # drive.get_file_info()
+                # ttk.Label(drive_frame, text=f"Filecount: {drive.image_count}").grid(row=1, column=0, sticky=tk.E, pady=2)
+                # ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=2)
+                # ttk.Label(drive_frame, text=f"Newest file: {drive.newest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
+                # ttk.Label(drive_frame, text=f"Oldest file: {drive.oldest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
 
             # Big square select button
             select_btn = tk.Button(drive_frame, text="SELECT", command=lambda d=drive: self.select_drive(d))
@@ -132,6 +132,20 @@ class SDCardUploaderGUI:
             select_btn.config(width=10, height=5)
             select_btn.bind("<Enter>", self.turn_red)
 
+    def get_info_and_update_gui(self, drive, drive_frame):
+        # This will run in the thread
+        drive.get_file_info()
+        # Now update the GUI with the new values
+        # NOTE: We are using the lambda function with after() to make sure the GUI update happens in the main thread
+        self.master.after(0, lambda: self.update_gui_with_drive_info(drive, drive_frame))
+    
+    def update_gui_with_drive_info(self, drive, drive_frame):
+        # Update the labels in the GUI with the new info from the drive
+        ttk.Label(drive_frame, text=f"Filecount: {drive.image_count}").grid(row=1, column=0, sticky=tk.E, pady=2)
+        ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=2)
+        ttk.Label(drive_frame, text=f"Newest file: {drive.newest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
+        ttk.Label(drive_frame, text=f"Oldest file: {drive.oldest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
+            
     def select_drive(self, drive):
         """Handle the drive selection and display the upload confirmation."""
         print(f"Selected drive: {drive.device}")
@@ -163,7 +177,7 @@ class SDCardUploaderGUI:
         ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
         ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
         cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera,
-        values=('360Camera', 'Drone', 'GoPro' , 'CameraTrap', 'DSLR','UnderwaterGoPro', 'Mixed', 'Other'))
+        values=('360Camera', 'Drone', 'GoPro' , 'Wildlife_Camera', 'DSLR','Underwater_GoPro', 'Mixed', 'Other'))
         cameraEntry.grid(column=1, row=2, sticky=(W, E))
 
         # Date Entry

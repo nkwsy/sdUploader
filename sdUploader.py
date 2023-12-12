@@ -270,7 +270,7 @@ def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
 #### Download files to local directory
 def downloadFiles(mount_point=None, date=None, location='', notes='', file_list=None):
         #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    base_folder = f"{home_folder}{camera}"
+    # base_folder = f"{home_folder}{camera}"
     file_list = get_files_in_sd_card(mount_point)
     today = datetime.now()
     folder_name = f"{today.strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -307,7 +307,7 @@ def get_metadata(file_path, tags=['Make', 'Model', 'CameraType', 'MakerNote','MI
     """Retrieve metadata for any media type."""
     try:
         with ExifToolHelper() as et:
-            logger.info(f'Getting metadata for {file_path}')
+            # logger.info(f'Getting metadata for {file_path}')
             metadata = et.get_tags(file_path, tags)
     except Exception as e:
         logger.error(e)

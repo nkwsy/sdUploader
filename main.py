@@ -18,7 +18,7 @@ def start_download(src, dst):
     thread.start()
     return thread
 
-def start_upload_thread(folder, info):
+def start_upload(folder, info):
     """Starts the upload process in a separate thread."""
     thread = threading.Thread(target=sd.simple_upload_files, args=(folder, info))
     thread.start()
@@ -176,7 +176,7 @@ class SDCardUploaderGUI:
         self.photographer = StringVar()
         ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
         ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photograher)
+        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photographer)
         self.nameEntry.grid(column=1, row=1, sticky=(W, E))
 
         # Camera Type
@@ -246,7 +246,7 @@ class SDCardUploaderGUI:
         # autodelete checkbox
         self.autodelete = tk.IntVar()
         autodelete_box = tk.Checkbutton(confirm_window, text='Automaticly clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
-        autodelete_box.grid(column=1, row=6, sticky=(W, E))
+        autodelete_box.pack(pady=10)
 
         # A confirmation button to start the "upload"
         self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download(estimated_time_seconds))
@@ -289,7 +289,7 @@ class SDCardUploaderGUI:
     def download_complete(self):
         self.locked = True
         messagebox.showinfo("Backing up", "Backing up to server, might take a wee bit")
-        start_upload_thread = start_upload_thread(self.temp_folder, self.data_entry_info)
+        start_upload_thread = start_upload(self.temp_folder, self.data_entry_info)
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
         

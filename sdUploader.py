@@ -230,6 +230,8 @@ def simple_upload_files(src_dir, camera_info):
     with open(textFile, 'w') as f:
         f.write(info)
     logger.info('Finished uploading files!')
+    with open(src_dir + '/uploaded.txt', 'w') as f:
+        f.write(f'{output_folder}\n')
     pass
 
 def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):

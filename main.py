@@ -9,6 +9,7 @@ from datetime import datetime
 import time
 from datetime import timedelta
 import threading
+from multiprocessing import Process
 
 
 def start_download(src, dst):
@@ -17,7 +18,13 @@ def start_download(src, dst):
     thread.start()
     return thread
 
+def start_upload(folder, info):
+    """Starts the upload process in a separate thread."""
+    thread = threading.Thread(target=sd.simple_upload_files, args=(folder, info))
+    thread.start()
+    return thread
     # dirEntry.grid(column=1, row=6, sticky=(W, E))
+
 
     # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
     # notes
@@ -166,19 +173,18 @@ class SDCardUploaderGUI:
         self.data_entry(self.entry_window)
         
     def data_entry(self, manual_frame):
-        self.photograher = StringVar()
+        self.photographer = StringVar()
         ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
         ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-        nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photograher)
-        nameEntry.grid(column=1, row=1, sticky=(W, E))
+        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photographer)
+        self.nameEntry.grid(column=1, row=1, sticky=(W, E))
 
         # Camera Type
         self.camera = StringVar()
         ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
         ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
-        cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera,
-        values=('360Camera', 'Drone', 'GoPro' , 'Wildlife_Camera', 'DSLR','Underwater_GoPro', 'Mixed', 'Other'))
-        cameraEntry.grid(column=1, row=2, sticky=(W, E))
+        self.cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera, values=('360Camera', 'Drone', 'GoPro' , 'Wildlife_Camera', 'DSLR','Underwater_GoPro', 'Mixed', 'Other'))
+        self.cameraEntry.grid(column=1, row=2, sticky=(W, E))
 
         # Date Entry
         self.date = StringVar()
@@ -190,20 +196,19 @@ class SDCardUploaderGUI:
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
         ttk.Label(manual_frame, text="No spaces please as this names folder").grid(column=2, row=4, sticky=W)
-        nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.location)
-        nameEntry.grid(column=1, row=4, sticky=(W, E))
+        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.location)
+        self.nameEntry.grid(column=1, row=4, sticky=(W, E))
 
         self.notes = StringVar()
         ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
-        nameEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
-        nameEntry.grid(column=1, row=5, sticky=(W, E))
-
+        self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
+        self.notesEntry.grid(column=1, row=5, sticky=(W, E))
         submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
-        submit_button.grid(row=7, column=1, padx=10, pady=10)
+        submit_button.grid(row=8, column=1, padx=10, pady=10)
 
 
     def submit_form(self):
-        self.data_entry_info = {'photographer':self.photograher.get(),
+        self.data_entry_info = {'photographer':self.photographer.get(),
                                 'camera':self.camera.get(), 
                                 'date':self.dateEntry.get_date(), 
                                 'location': self.location.get(), 
@@ -237,6 +242,11 @@ class SDCardUploaderGUI:
         self.progress_text.set("0%")
         self.progress = ttk.Progressbar(confirm_window, orient=tk.HORIZONTAL, length=300, mode='determinate', maximum=1, )
         self.progress.pack(pady=20)
+
+        # autodelete checkbox
+        self.autodelete = tk.IntVar()
+        autodelete_box = tk.Checkbutton(confirm_window, text='Automaticly clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
+        autodelete_box.pack(pady=10)
 
         # A confirmation button to start the "upload"
         self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download(estimated_time_seconds))
@@ -272,12 +282,15 @@ class SDCardUploaderGUI:
             logger.info("Upload completed!")
             self.progress_text.set("100%")
             self.locked = False
+            messagebox.showinfo("Upload Complete", "Upload Complete")
             self.wipeSDWindow(self.drive.mountpoint)
             self.download_complete()
             
     def download_complete(self):
         self.locked = True
-        sd.simple_upload_files(self.temp_folder, self.data_entry_info)
+        messagebox.showinfo("Backing up", "Backing up to server, might take a wee bit")
+        start_upload_thread = start_upload(self.temp_folder, self.data_entry_info)
+        messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
         
        
@@ -288,13 +301,18 @@ class SDCardUploaderGUI:
 
     def wipeSDWindow(self, mydir):
         # ... [The rest of the method remains unchanged]
-        result = messagebox.askyesno(
-            message='Would you like to Wipe the SD card?',
-            icon='question', title='Wipe SD Card', detail='Verify all files are copied correctly. If this is true please wipe card for next user')
+        if self.autodelete.get() == 1:
+            result = True
+        else:
+            result = messagebox.askyesno(
+                message='Would you like to Wipe the SD card?',
+                icon='question', title='Wipe SD Card', detail='Verify all files are copied correctly. If this is true please wipe card for next user')
         if result:
             try:
+                messagebox.showinfo("Wiping SD card", "Please wait")
                 print(mydir)
                 sd.delete_contents_of_dir(mydir)
+                messagebox.showinfo("Wiping SD card", "Wipe complete, you can eject the SD card now")
             except OSError as e:
                 logger.error("Error: %s - %s." % (e.filename, e.strerror))
             pass
@@ -321,7 +339,7 @@ def on_closing(app_instance):
         logger.warning("Upload in progress, please wait")
         time.sleep(10)
     root.quit()
-
+        
 def start_gui():
     global root
     root = tk.Tk()
@@ -335,7 +353,7 @@ def check_sd_loop():
     while True:
         sd_card_check = sd.check_sd()
         mounted_drive_check = [card.device for card in sd_card_check]
-        logger.info(f"Checking for SD cards: {mounted_drive_check}, old: {old_sd_card}")
+        #logger.info(f"Checking for SD cards: {mounted_drive_check}, old: {old_sd_card}")
         if not sd_card_check:
             print(sd_card_check)
             print(type(sd_card_check))

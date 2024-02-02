@@ -292,7 +292,7 @@ class SDCardUploaderGUI:
         start_upload_thread = start_upload(self.temp_folder, self.data_entry_info)
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
-        self.master.quit()
+        # self.master.quit()
         
        
     def browse_button(self):

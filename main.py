@@ -292,6 +292,7 @@ class SDCardUploaderGUI:
         start_upload_thread = start_upload(self.temp_folder, self.data_entry_info)
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
+        # self.master.quit()
         
        
     def browse_button(self):
@@ -360,7 +361,7 @@ def check_sd_loop():
             old_sd_card = None
             time.sleep(5)
         elif mounted_drive_check == old_sd_card:
-            logger.info(f"Identical SD cards detected: {mounted_drive_check} == {old_sd_card}")
+            # logger.info(f"Identical SD cards detected: {mounted_drive_check} == {old_sd_card}")
             time.sleep(5)
         else:
             logger.info(f"Starting Gui, SD card detected: {mounted_drive_check}")

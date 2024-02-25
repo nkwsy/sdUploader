@@ -21,7 +21,11 @@ camtrap_config_urls['media'] = f"{camtrap_config_urls['base_url']}{config['CAMTR
 camtrap_config_urls['observations'] = f"{camtrap_config_urls['base_url']}{config['CAMTRAP_OBSERVATIONS_SCHEMA']}"
 
 
-def get_camtrap_dp_data(sd_input:dict=None, camtrap_config_urls:dict=None) -> dict:
+def get_camtrap_dp_metadata(file_path_raw:sd.SdXDevice = None, 
+                        sd_data_entry_info:dict = None,
+                        camtrap_config_urls:dict = camtrap_config_urls,
+                        resources_prepped:list = None
+                        ) -> dict:
     '''Get sdUploader inputs for datapackage.json'''
 
     # Package(resources=[Resource(name='deployments',
@@ -29,7 +33,86 @@ def get_camtrap_dp_data(sd_input:dict=None, camtrap_config_urls:dict=None) -> di
     #                             # format='csv',
     #                             )])
     
-    descriptor = requests.get('https://raw.githubusercontent.com/tdwg/camtrap-dp/1.0-rc.1/example/datapackage.json').json()
+    # descriptor = requests.get('https://raw.githubusercontent.com/tdwg/camtrap-dp/1.0-rc.1/example/datapackage.json').json()
+
+    if config['MODE'] == "TEST":
+        file_path = config['TEST_SD_FILE_PATH']
+        data_entry_info = {
+            'photographer':'test-PHOTOGRAPHER',
+            'camera':'test-CAMERA', 
+            'date':'test-DATE', 
+            'location': 'test-DEPLOYMENT-LOCATION', 
+            'notes': 'test-NOTES',
+            }
+        
+    else: 
+        file_path = file_path_raw.mountpoint
+        data_entry_info = sd_data_entry_info
+        
+    print(f'file path = = = {file_path}')
+
+    # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
+    # descriptor = get_camtrap_dp_data(file_path)
+    
+    descriptor = Package('datapackage.json')
+    
+    descriptor.profile = camtrap_config_urls['profile_url']
+    descriptor.name = 'test-project-name-with-location-and-id', # TODO - replace with input
+    descriptor.created = data_entry_info['date']
+    descriptor.description = ''
+    descriptor.keywords = ''
+    descriptor.image = ''
+    descriptor.homepage = 'https://www.urbanriv.org/'
+    descriptor.licenses = [
+        {
+            "name": "CC0-1.0",  # TODO - confirm w/ UR
+            "scope": "data"
+        },
+        {
+            "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
+            "scope": "media"
+        }
+        ]
+
+    descriptor.contributors = [
+        # NOTE - maybe best to split hardcoded parts out to a config file
+        {
+            'title' : data_entry_info['photographer'],
+            'role:' : 'contributor',
+            'organization' : data_entry_info['photographer']
+        },
+        {
+            "title": "Nick Wesley",
+            "email": "", # TODO - confirm w/ NW
+            "path": "",  # TODO - setup/add https://orcid.org w/ NW
+            "role": "contact",
+            "organization": "Urban Rivers"
+        },
+        {
+            "title": "Urban Rivers",
+            "path": "https://www.urbanriv.org",
+            "role": "rightsHolder"
+        },
+        {
+            "title": "Urban Rivers",
+            "path": "https://www.urbanriv.org", 
+            "role": "publisher"
+        }
+        ]
+    
+    descriptor.project = {
+        'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
+        'id' : '',
+        'acronym' : '',
+        'description' : '',
+        'path' : 'https://www.urbanriv.org',
+        'samplingDesign' : 'opportunistic',
+        'captureMethod' : ['activityDetection', 'timeLapse'],
+        'individualAnimals' : False,
+        'observationLevel' : ['media', 'event']
+    }
+
+    descriptor.resources = resources_prepped
 
     return descriptor
 
@@ -55,68 +138,13 @@ def setup_camtrap_resource(dataset:DataFrame=None,
     return resource
 
 
-def setup_deployments_dataset(file_path:str=None) -> list:
-    '''Get sdUploader inputs for deployments.csv'''
-    # Setup Deployment table/csv following Camtrap-DP Deployments schema
-    # # Referencing Trapper's deployments-related django serializer for a start (minus pandas, Django)
-    # # https://gitlab.com/trapper-project/trapper/-/blob/master/trapper/trapper-project/trapper/apps/geomap/serializers.py#LC237
-    
-    # deployment_template = Schema(requests.get(camtrap_config_urls['deployments']).json())
-    # print(f'# # # # # # # #  deployment_template = {deployment_template}')
-    
-    # TODO - read & map observation data from input file_path
-
-    deployment_table = uc.get_deployments_table_schema()
-
-    # dep_table = DataFrame(dep_raw_data)
-
-    return deployment_table
-    
-    # media_data = None
-    # image_batch = os.listdir(file_path)
-
-    # # sd.get_image_info('/Volumes/LUMIX/DCIM163_PANA')
-    # if image_batch is not None:
-
-    #     camtrap_tags = uc.get_media_table_schema()
-
-    #     # camtrap_tags = ['Make', 'Model']
-    #     media_raw_data = []
-    #     image_row = None
-
-    #     with ExifToolHelper() as et:
-    #         for image in image_batch:
-    #             print(f'img ==== {image}')
-    #             image_row = {}
-    #             for tags in et.get_tags(f'{file_path}/{image}', tags=camtrap_tags):
-    #                 # for tags in et.get_tags("/Volumes/LUMIX/DCIM/162_PANA/P1620389.JPG", tags=camtrap_tags):
-    #                 for k, v in tags.items():
-    #                     # if v is not None:
-    #                     image_row[k] = v
-    #             media_raw_data.append(image_row)
-
-    #     media_data = DataFrame(media_raw_data)
-    #     print(f'media_data = {media_data}')
-
-    # return media_data
-    
-    
-    # target = transform(
-    #     source,
-    #     steps=[
-    #         steps.resource_add(name='extra', descriptor={'path': 'transform.csv'}),
-    #         ],
-    #         )
-    # print(f'# # # # # # # # source = {source}')
-    # print(f'target = :...')
-    # print(target.get_resource('extra').to_view())
-
-
-def setup_media_dataset(file_path:str=None):
-    '''Get sdUploader + image inputs for media.csv'''
+def setup_datasets(file_path:str=None, input_data:dict=None) -> list:
+    '''Get sdUploader + image inputs for deployments, media, observations'''
     
     media_data = None
     image_batch = os.listdir(file_path)
+
+    prepped_datasets_as_resources = []
 
     # sd.get_image_info('/Volumes/LUMIX/DCIM163_PANA')
     if image_batch is not None:
@@ -124,6 +152,8 @@ def setup_media_dataset(file_path:str=None):
         camtrap_tags = ['Make', 'Model']
         media_raw_data = []
         image_row = None
+        media_row_blank = uc.get_media_table_schema()
+        media_row = None
 
         with ExifToolHelper() as et:
             for image in image_batch:
@@ -135,23 +165,32 @@ def setup_media_dataset(file_path:str=None):
                     for k, v in tags.items():
                         # if v is not None:
                         image_row[k] = v
-                media_raw_data.append(image_row)
+
+                
+                media_row = {}
+                media_row = uc.map_to_camtrap_media(media_table=media_row_blank, input_data=input_data)
+                media_raw_data.append(media_row)
 
         media_data = DataFrame(media_raw_data)
+        media_resource = setup_camtrap_resource(dataset = media_data,
+                                                data_name = 'media')
+        
         print(f'media_data = {media_data}')
 
-    return media_data
+        prepped_datasets_as_resources.append(media_resource)
+
+    return prepped_datasets_as_resources
     
 
-def get_observations_data(file_path:str=None):
-    '''Get inputs [if any] for observations.csv'''
-    # TODO - read & map observation data from input file_path
+# def get_observations_data(file_path:str=None):
+#     '''Get inputs [if any] for observations.csv'''
+#     # TODO - read & map observation data from input file_path
 
-    observation_terms = uc.get_observations_table_schema()
-    obs_raw_data = [dict.fromkeys(observation_terms)]
-    obs_table = DataFrame(obs_raw_data)
+#     observation_terms = uc.get_observations_table_schema()
+#     obs_raw_data = [dict.fromkeys(observation_terms)]
+#     obs_table = DataFrame(obs_raw_data)
 
-    return obs_table
+#     return obs_table
 
 
 def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=None):
@@ -179,8 +218,6 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
 
     # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
     # descriptor = get_camtrap_dp_data(file_path)
-    
-    descriptor = data_entry_info
 
     
     # TODO - Get sdUploader + camera data for deployments.csv -- e.g.:
@@ -239,25 +276,32 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
     # TODO - replace metadata/descriptor example with real-data inputs
     # TODO - replace deployments example with real-data inputs
 
-    output_camtrap = package.CamTrapPackage(
-        metadata = descriptor,
-        deployments = deployments_table, # CAMTRAP_DEPLOYMENTS_URL,  #  deps
-        media = media_table, 
-        observations = observations_table, #  obs, # CAMTRAP_OBSERVATIONS_URL,
-        schema_version = config['CAMTRAP_VERSION']
-    )
+    # output_camtrap = package.CamTrapPackage(
+    #     metadata = descriptor,
+    #     deployments = deployments_table, # CAMTRAP_DEPLOYMENTS_URL,  #  deps
+    #     media = media_table, 
+    #     observations = observations_table, #  obs, # CAMTRAP_OBSERVATIONS_URL,
+    #     schema_version = config['CAMTRAP_VERSION']
+    # )
+
+
+    # output_camtrap = Package(
+    #     descriptor = 
+    #     resources = [
+    #         Resource(name = 'deployments',
+    #                  path = '',
+    #                  profile = 'tabular-data-resource',
+    #                  schema = camtrap_config_urls['deployments']
+    #                  )])
+
+    data_resources = setup_datasets(file_path, data_entry_info)
         
-    output_camtrap = Package(
-        name = 'test-project-name-with-location-and-id', # TODO - replace with input
-        profile = camtrap_config_urls['profile_url'],
-        resources = [
-            Resource(name = 'deployments',
-                     path = '',
-                     profile = 'tabular-data-resource',
-                     schema = camtrap_config_urls['deployments']
-                     )])
-
-
+    output_camtrap = get_camtrap_dp_metadata(
+        file_path_raw = file_path_raw, 
+        sd_data_entry_info = data_entry_info,
+        camtrap_config_urls = camtrap_config_urls,
+        resources_prepped = data_resources
+        )
 
     # Validate Camtrap-DP
     # TODO - output validation log

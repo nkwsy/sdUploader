@@ -258,6 +258,80 @@ def map_to_camtrap_observations(observations_table:list=None,
     
     return obs_map
 
+class CamtrapPackage():
+    '''
+    Sets up a frictionless data package following the camtrap-dp exchange format. [Hopefully.]
+    - https://tdwg.github.io/camtrap-dp
+    - https://specs.frictionlessdata.io/data-package
+    '''
+
+
+    def __init__(
+            self, 
+            camtrap_config_urls:dict=None, 
+            data_entry_info:dict=None,
+            resources_prepped:list=None,
+            ) -> None:
+        
+        self.profile = camtrap_config_urls['profile_url']
+        self.name = 'test-project-name-with-location-and-id', # TODO - replace with input
+        self.created = data_entry_info['date']
+        self.description = ''
+        self.keywords = ''
+        self.image = ''
+        self.homepage = 'https://www.urbanriv.org/'
+        self.licenses = [
+            {
+                "name": "CC0-1.0",  # TODO - confirm w/ UR
+                "scope": "data"
+            },
+            {
+                "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
+                "scope": "media"
+            }
+            ]
+
+        self.contributors = [
+            # NOTE - maybe best to split hardcoded parts out to a config file
+            {
+                'title' : data_entry_info['photographer'],
+                'role:' : 'contributor',
+                'organization' : data_entry_info['photographer']
+            },
+            {
+                "title": "Nick Wesley",
+                "email": "", # TODO - confirm w/ NW
+                "path": "",  # TODO - setup/add https://orcid.org w/ NW
+                "role": "contact",
+                "organization": "Urban Rivers"
+            },
+            {
+                "title": "Urban Rivers",
+                "path": "https://www.urbanriv.org",
+                "role": "rightsHolder"
+            },
+            {
+                "title": "Urban Rivers",
+                "path": "https://www.urbanriv.org", 
+                "role": "publisher"
+            }
+            ]
+        
+        self.project = {
+            'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
+            'id' : '',
+            'acronym' : '',
+            'description' : '',
+            'path' : 'https://www.urbanriv.org',
+            'samplingDesign' : 'opportunistic',
+            'captureMethod' : ['activityDetection', 'timeLapse'],
+            'individualAnimals' : False,
+            'observationLevel' : ['media', 'event']
+        }
+
+        self.resources = resources_prepped
+
+
 def save(
         package_metadata=None,
         output_path=None,

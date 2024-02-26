@@ -54,65 +54,68 @@ def get_camtrap_dp_metadata(file_path_raw:sd.SdXDevice = None,
     # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
     # descriptor = get_camtrap_dp_data(file_path)
     
-    descriptor = Package()
+    descriptor = uc.CamtrapPackage(
+        camtrap_config_urls=camtrap_config_urls,
+        data_entry_info=data_entry_info,
+        resources_prepped=resources_prepped)
     
-    descriptor.profile = camtrap_config_urls['profile_url']
-    descriptor.name = 'test-project-name-with-location-and-id', # TODO - replace with input
-    descriptor.created = data_entry_info['date']
-    descriptor.description = ''
-    descriptor.keywords = ''
-    descriptor.image = ''
-    descriptor.homepage = 'https://www.urbanriv.org/'
-    descriptor.licenses = [
-        {
-            "name": "CC0-1.0",  # TODO - confirm w/ UR
-            "scope": "data"
-        },
-        {
-            "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
-            "scope": "media"
-        }
-        ]
+    # descriptor.profile = camtrap_config_urls['profile_url']
+    # descriptor.name = 'test-project-name-with-location-and-id', # TODO - replace with input
+    # descriptor.created = data_entry_info['date']
+    # descriptor.description = ''
+    # descriptor.keywords = ''
+    # descriptor.image = ''
+    # descriptor.homepage = 'https://www.urbanriv.org/'
+    # descriptor.licenses = [
+    #     {
+    #         "name": "CC0-1.0",  # TODO - confirm w/ UR
+    #         "scope": "data"
+    #     },
+    #     {
+    #         "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
+    #         "scope": "media"
+    #     }
+    #     ]
 
-    descriptor.contributors = [
-        # NOTE - maybe best to split hardcoded parts out to a config file
-        {
-            'title' : data_entry_info['photographer'],
-            'role:' : 'contributor',
-            'organization' : data_entry_info['photographer']
-        },
-        {
-            "title": "Nick Wesley",
-            "email": "", # TODO - confirm w/ NW
-            "path": "",  # TODO - setup/add https://orcid.org w/ NW
-            "role": "contact",
-            "organization": "Urban Rivers"
-        },
-        {
-            "title": "Urban Rivers",
-            "path": "https://www.urbanriv.org",
-            "role": "rightsHolder"
-        },
-        {
-            "title": "Urban Rivers",
-            "path": "https://www.urbanriv.org", 
-            "role": "publisher"
-        }
-        ]
+    # descriptor.contributors = [
+    #     # NOTE - maybe best to split hardcoded parts out to a config file
+    #     {
+    #         'title' : data_entry_info['photographer'],
+    #         'role:' : 'contributor',
+    #         'organization' : data_entry_info['photographer']
+    #     },
+    #     {
+    #         "title": "Nick Wesley",
+    #         "email": "", # TODO - confirm w/ NW
+    #         "path": "",  # TODO - setup/add https://orcid.org w/ NW
+    #         "role": "contact",
+    #         "organization": "Urban Rivers"
+    #     },
+    #     {
+    #         "title": "Urban Rivers",
+    #         "path": "https://www.urbanriv.org",
+    #         "role": "rightsHolder"
+    #     },
+    #     {
+    #         "title": "Urban Rivers",
+    #         "path": "https://www.urbanriv.org", 
+    #         "role": "publisher"
+    #     }
+    #     ]
     
-    descriptor.project = {
-        'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
-        'id' : '',
-        'acronym' : '',
-        'description' : '',
-        'path' : 'https://www.urbanriv.org',
-        'samplingDesign' : 'opportunistic',
-        'captureMethod' : ['activityDetection', 'timeLapse'],
-        'individualAnimals' : False,
-        'observationLevel' : ['media', 'event']
-    }
+    # descriptor.project = {
+    #     'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
+    #     'id' : '',
+    #     'acronym' : '',
+    #     'description' : '',
+    #     'path' : 'https://www.urbanriv.org',
+    #     'samplingDesign' : 'opportunistic',
+    #     'captureMethod' : ['activityDetection', 'timeLapse'],
+    #     'individualAnimals' : False,
+    #     'observationLevel' : ['media', 'event']
+    # }
 
-    descriptor.resources = resources_prepped
+    # descriptor.resources = resources_prepped
 
     return descriptor
 
@@ -255,6 +258,7 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
             }
         
     else: 
+        # TODO - check if mountpoint sd.SdXDevice is interchangeable with str
         file_path = file_path_raw.mountpoint
         data_entry_info = sd_data_entry_info
         

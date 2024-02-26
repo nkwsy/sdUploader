@@ -4,7 +4,8 @@ from datetime import datetime
 from dotenv import dotenv_values
 from exiftool import ExifToolHelper
 from pandas import DataFrame
-import os, re, requests
+from frictionless import Package
+import json, os, re, requests, uuid, zipfile
 
 
 config = dotenv_values()
@@ -19,27 +20,6 @@ camtrap_observations_schema_url = f'{camtrap_base_url}{config["CAMTRAP_OBSERVATI
 # # Referencing Trapper's deployments-related django serializer for a start (minus pandas, Django)
 # # https://gitlab.com/trapper-project/trapper/-/blob/master/trapper/trapper-project/trapper/apps/geomap/serializers.py#LC237
 
-# deployment_schema = Schema(requests.get(camtrap_deployment_schema_url).json())
-# print(deployment_schema)
-
-# def get_required_fields(schema:Schema=None) -> list:
-#     '''Gets the required fields in a given schema (dict)'''
-    
-#     new_record = Resource()
-#     # required_fields = []
-#     i = 0
-#     for field in schema.field_names: #  .get_field():
-#         i += 1
-#         # field_definition = schema.get_field(field)
-#         # if field_definition['constraints']['required'] is True:
-#         #     required_fields.append(field_definition)
-#         new_record.fields(f"TEST_{i}")
-    
-#     return new_record
-
-# new_deployment = get_required_fields(deployment_schema)
-# print(new_deployment)
-
 
 def get_camtrap_dp_profile() -> list:
     '''get profile from camtrap-dp repo'''
@@ -50,13 +30,16 @@ def get_camtrap_dp_profile() -> list:
     return camtrap_profile
 
 
-def map_camtrap_dp_profile(camtrap_profile:str=None) -> list:
+def map_camtrap_dp_profile(camtrap_profile:str=None, generate_uuid4:bool=True) -> list:
+
+    if generate_uuid4:
+        dp_id = str(uuid.uuid4())
 
     dp_metadata = {
         'resources' : [],
         'profile' : camtrap_profile_url, 
         'name' : None, 
-        'id' : None, 
+        'id' : dp_id, 
         'created' : str(datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%SZ')), # TODO - input data
         'title' : None, 
         'contributors' : [],
@@ -82,21 +65,19 @@ def map_camtrap_dp_profile(camtrap_profile:str=None) -> list:
 def get_image_data(media_file_path:str=None) -> list:
     '''get a list of EXIF data for directory of images'''
 
-    image_batch = os.listdir(media_file_path)
+    # image_batch = os.listdir(media_file_path)
 
     image_info_list = []
     image_info = {}
 
-    if len(image_batch) > 0:
+    # if len(image_batch) > 0:
 
-        if re.findall('', image_batch[0].lower()) is not None:
+    #     if re.findall('', image_batch[0].lower()) is not None:
 
-            with ExifToolHelper() as et:
-                # image = image_batch[0]
-                for image in image_batch:
-                    print(f'img ==== {image_batch[0]}')
-                    image_info = et.get_tags(f'{media_file_path}/{image}', tags = None)
-                    image_info_list.append(image_info)
+    with ExifToolHelper() as et:
+        # image = image_batch[0]
+            image_info = et.get_tags(f'{media_file_path}', tags = None)
+            image_info_list.append(image_info)
     
     return image_info_list
 
@@ -120,7 +101,8 @@ def map_to_camtrap_deployment(deployment_table:list=None,
                               media_table:DataFrame=None) -> list:
     '''map input fields & files to camtrap-dp deployments table fields'''
 
-    camera_info = get_image_data(media_file_path)[0]
+    first_image_info = get_image_data(media_file_path)[0][0]
+    print(f'map-to-camtraps first_image_info = = {first_image_info}')
 
     deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
 
@@ -138,10 +120,10 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "deploymentComments" : None,
         "setupBy" : None,
         "cameraID" : None,  # from list
-        "cameraModel" : f"{camera_info['Make']}-{camera_info['Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
+        "cameraModel" : f"{first_image_info['EXIF:Make']}-{first_image_info['EXIF:Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
         "cameraDelay" : None, # integer
         "cameraDepth" : None,   # float
-        "cameraInterval" : None, # integer
+        # "cameraInterval" : None, # integer
         "cameraHeight" : None,   # float
         "cameraTilt" : None,     # float
         "cameraHeading" : None,
@@ -154,10 +136,10 @@ def map_to_camtrap_deployment(deployment_table:list=None,
     
     # validate static deployment mapping against current camtrap DP schema
     # TODO - split out mapping to config file to make this easier to maintain
-    for key in deployment_map:
-        if key not in deployment_table:
-            raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {deployment_table}')
-    
+    for key in deployment_map.keys():
+        if key not in deployment_table[0]:
+            raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {deployment_table[0].keys()}')
+
     return deployment_map
 
 
@@ -179,15 +161,15 @@ def map_to_camtrap_media(media_table:list=None,
                          media_file_path:str=None) -> list:
     '''map input fields & files to camtrap-dp media table fields'''
 
-    image_info = get_image_data(media_file_path)
+    image_info = get_image_data(media_file_path)[0]
 
     for image in image_info:
 
-        image_create_date_raw = datetime.strptime(image_info[0]['EXIF:CreateDate'], '%Y:%m:%d %H:%M:%S')
+        image_create_date_raw = datetime.strptime(image['EXIF:CreateDate'], '%Y:%m:%d %H:%M:%S')
         image_create_date_iso = datetime.strftime(image_create_date_raw, '%Y-%m-%dT%H:%M:%S-0600')
 
         deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
-        media_id = re.sub(r'\\..+$', image['File:FileName'])
+        media_id = re.sub(r'\..+$', '', image['File:FileName'])
 
         media_map = {
             "mediaID" : media_id,  # Required
@@ -204,9 +186,10 @@ def map_to_camtrap_media(media_table:list=None,
         }
 
     # TODO - split out mapping to config file to make this easier to maintain
-    for key in media_map:
-        if key not in media_table:
-            raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {media_table}')
+    print(f'media table = {media_table[0]}')
+    for key in media_map.keys():
+        if key not in media_table[0]:
+            raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {media_table[0].keys()}')
 
     return media_map
 
@@ -218,41 +201,105 @@ def get_observations_table_schema() -> list:
     obs_schema = requests.get(camtrap_observations_schema_url).json()
 
     obs_fields_raw = obs_schema['fields']
-    
     obs_fields = [field['name'] for field in obs_fields_raw]
-
     obs_table = [dict.fromkeys(obs_fields)]
 
-    # observation_fields = [
-    #     "observationID",
-    #     "deploymentID",
-    #     "mediaID",
-    #     "eventID",
-    #     "eventStart",
-    #     "eventEnd",
-    #     "observationLevel",
-    #     "observationType",
-    #     "cameraSetupType",
-    #     "taxonID",
-    #     "scientificName",
-    #     "count",
-    #     "lifeStage",
-    #     "sex",
-    #     "behavior",
-    #     "individualID",
-    #     "individualPositionRadius",
-    #     "individualPositionAngle",
-    #     "individualSpeed",
-    #     "bboxX",
-    #     "bboxY",
-    #     "bboxWidth",
-    #     "bboxHeight",
-    #     "classificationMethod",
-    #     "classifiedBy",
-    #     "classificationTimestamp",
-    #     "classificationProbability",
-    #     "observationTags",
-    #     "observationComments"
-    # ]
-
     return obs_table
+
+
+def map_to_camtrap_observations(observations_table:list=None, 
+                                input_data:list=None, 
+                                # media_file_path:str=None,
+                                media_table:DataFrame=None) -> list:
+    '''map input fields & files to camtrap-dp observations table fields'''
+
+    # first_image_info = get_image_data(media_file_path)[0]
+
+    deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
+
+    obs_map = {
+        "observationID" : None,
+        "deploymentID" : deploy_id,
+        "mediaID" : media_table['mediaID'], # TODO - fix
+        "eventID" : None,
+        "eventStart" : None,
+        "eventEnd" : None,
+        "observationLevel" : None,
+        "observationType" : None,
+        "cameraSetupType" : None,
+        # "taxonID" : None,
+        "scientificName" : None,
+        "count" : None,
+        "lifeStage" : None,
+        "sex" : None,
+        "behavior" : None,
+        "individualID" : None,
+        "individualPositionRadius" : None,
+        "individualPositionAngle" : None,
+        "individualSpeed" : None,
+        "bboxX" : None,
+        "bboxY" : None,
+        "bboxWidth" : None,
+        "bboxHeight" : None,
+        "classificationMethod" : None,
+        "classifiedBy" : None,
+        "classificationTimestamp" : None,
+        "classificationProbability" : None,
+        "observationTags" : None,
+        "observationComments" : None
+        }
+    
+    # validate static deployment mapping against current camtrap DP schema
+    # TODO - split out mapping to config file to make this easier to maintain
+    for key in obs_map:
+        print(f'obs key = {key}')
+        if key not in observations_table[0].keys():
+            raise ValueError(f'map_to_camtrap_observations needs updated mapping: fields must be one of {observations_table[0].keys()}')
+    
+    return obs_map
+
+def save(
+        package_metadata=None,
+        output_path=None,
+        sort_keys=False,
+        make_archive=True,
+    ):
+    '''
+    Output a camtrap-dp package as a zipped directory
+    Based on camtrap-package's 'save' function
+    - https://gitlab.com/oscf/camtrap-package/-/blame/master/src/camtrap_package/package.py?ref_type=heads#L301
+    '''
+    # if not validate(package):
+    #     return False
+
+    # mkdir if output_path does not exist
+    if output_path:
+        os.makedirs(output_path, exist_ok=True)
+        os.chdir(output_path)
+    else:
+        output_path = ''
+
+    descriptor = package_metadata
+    print(f'descriptor = = {descriptor}')
+
+    # dump descriptor
+    with open("datapackage.json", "w") as _file:
+        json.dump(descriptor, _file, indent=4, sort_keys=sort_keys)
+
+    # create zipfile (if requested)
+    zip_name = f"camtrap-dp-{descriptor['id']}.zip"
+    if make_archive:
+        with zipfile.ZipFile(zip_name, "w") as zipf:
+            zipf.write(
+                os.path.join(output_path, "deployments.csv"),
+                arcname="deployments.csv",
+            )
+            zipf.write(
+                os.path.join(output_path, "media.csv"), arcname="media.csv"
+            )
+            zipf.write(
+                os.path.join(output_path, "observations.csv"),
+                arcname="observations.csv",
+            )
+            zipf.write("datapackage.json")
+    return True

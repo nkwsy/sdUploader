@@ -28,13 +28,6 @@ def get_camtrap_dp_metadata(file_path_raw:sd.SdXDevice = None,
                         ) -> dict:
     '''Get sdUploader inputs for datapackage.json'''
 
-    # Package(resources=[Resource(name='deployments',
-    #                             path=camtrap_config_urls['deployments'],
-    #                             # format='csv',
-    #                             )])
-    
-    # descriptor = requests.get('https://raw.githubusercontent.com/tdwg/camtrap-dp/1.0-rc.1/example/datapackage.json').json()
-
     if config['MODE'] == "TEST":
         file_path = config['TEST_SD_FILE_PATH']
         data_entry_info = {
@@ -58,64 +51,6 @@ def get_camtrap_dp_metadata(file_path_raw:sd.SdXDevice = None,
         camtrap_config_urls=camtrap_config_urls,
         data_entry_info=data_entry_info,
         resources_prepped=resources_prepped)
-    
-    # descriptor.profile = camtrap_config_urls['profile_url']
-    # descriptor.name = 'test-project-name-with-location-and-id', # TODO - replace with input
-    # descriptor.created = data_entry_info['date']
-    # descriptor.description = ''
-    # descriptor.keywords = ''
-    # descriptor.image = ''
-    # descriptor.homepage = 'https://www.urbanriv.org/'
-    # descriptor.licenses = [
-    #     {
-    #         "name": "CC0-1.0",  # TODO - confirm w/ UR
-    #         "scope": "data"
-    #     },
-    #     {
-    #         "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
-    #         "scope": "media"
-    #     }
-    #     ]
-
-    # descriptor.contributors = [
-    #     # NOTE - maybe best to split hardcoded parts out to a config file
-    #     {
-    #         'title' : data_entry_info['photographer'],
-    #         'role:' : 'contributor',
-    #         'organization' : data_entry_info['photographer']
-    #     },
-    #     {
-    #         "title": "Nick Wesley",
-    #         "email": "", # TODO - confirm w/ NW
-    #         "path": "",  # TODO - setup/add https://orcid.org w/ NW
-    #         "role": "contact",
-    #         "organization": "Urban Rivers"
-    #     },
-    #     {
-    #         "title": "Urban Rivers",
-    #         "path": "https://www.urbanriv.org",
-    #         "role": "rightsHolder"
-    #     },
-    #     {
-    #         "title": "Urban Rivers",
-    #         "path": "https://www.urbanriv.org", 
-    #         "role": "publisher"
-    #     }
-    #     ]
-    
-    # descriptor.project = {
-    #     'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
-    #     'id' : '',
-    #     'acronym' : '',
-    #     'description' : '',
-    #     'path' : 'https://www.urbanriv.org',
-    #     'samplingDesign' : 'opportunistic',
-    #     'captureMethod' : ['activityDetection', 'timeLapse'],
-    #     'individualAnimals' : False,
-    #     'observationLevel' : ['media', 'event']
-    # }
-
-    # descriptor.resources = resources_prepped
 
     return descriptor
 
@@ -135,6 +70,8 @@ def convert_dataset_to_resource(dataset:DataFrame=None,
 
     resource = Resource(path = data_path)
     resource.name = data_name
+    # resource.scheme = 'file'
+    # resource.format = 'csv'
     resource.profile = 'tabular-data-resource',
     resource.schema = camtrap_config_urls[data_name]
 

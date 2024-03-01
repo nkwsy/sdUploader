@@ -5,3 +5,4 @@ venv/*
 temp/*
 test/*
 build/*
+sdUploader.log

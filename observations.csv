@@ -1,0 +1,17 @@
+observationID,deploymentID,mediaID,eventID,eventStart,eventEnd,observationLevel,observationType,cameraSetupType,scientificName,count,lifeStage,sex,behavior,individualID,individualPositionRadius,individualPositionAngle,individualSpeed,bboxX,bboxY,bboxWidth,bboxHeight,classificationMethod,classifiedBy,classificationTimestamp,classificationProbability,observationTags,observationComments
+,test-LOCATION-test-DATE-test-CAMERA,"0     P1630263
+1     P1630264
+2     P1630310
+3     P1630310
+4     P1630311
+5     P1630311
+6     P1630476
+7     P1630476
+8     P1630477
+9     P1630477
+10    P1630550
+11    P1630550
+12    P1630552
+13    P1630553
+14    P1630554
+Name: mediaID, dtype: object",,,,,,,,,,,,,,,,,,,,,,,,,

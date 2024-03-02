@@ -4,11 +4,11 @@
 import io, os, requests
 import sdUploader as sd
 import utils.camtrap_dp_terms as uc
-from camtrap_package import package
+# from camtrap_package import package
 from dotenv import dotenv_values
 from exiftool import ExifToolHelper
-from frictionless import Schema, Resource, Package, validate
-from pandas import DataFrame, read_csv
+from frictionless import Resource, validate
+from pandas import DataFrame
 
 
 config = dotenv_values()
@@ -48,7 +48,7 @@ def get_camtrap_dp_metadata(file_path_raw:sd.SdXDevice = None,
     # descriptor = get_camtrap_dp_data(file_path)
     
     descriptor = uc.CamtrapPackage(
-        camtrap_config_urls=camtrap_config_urls,
+        # camtrap_config_urls=camtrap_config_urls,
         data_entry_info=data_entry_info,
         resources_prepped=resources_prepped)
 
@@ -68,24 +68,28 @@ def convert_dataset_to_resource(dataset:DataFrame=None,
     data_path = f'{data_name}.csv'
     dataset.to_csv(data_path, index = False)
 
-    resource = Resource(path = data_path)
-    resource.name = data_name
-    # resource.scheme = 'file'
-    # resource.format = 'csv'
-    resource.profile = 'tabular-data-resource',
-    resource.schema = camtrap_config_urls[data_name]
+    resource = {
+        'path' : data_path,
+        'name' : data_name,
+        'scheme' : 'file',
+        'format' : 'csv',
+        'profile' : 'tabular-data-resource',
+        'schema' : camtrap_config_urls[data_name]
+    }
 
     return resource
 
 
-def generate_deployments_datasets(file_path:str=None, media_table:list=None, input_data:dict=None) -> list:
+def generate_deployments_datasets(
+        file_path:str=None,
+        media_table:list=None,
+        input_data:dict=None
+        ) -> list:
     '''Get sdUploader + image inputs for deployments'''
     
     deps_data_raw = None
     deps_table_blank = uc.get_deployments_table_schema()
-    # image_batch = os.listdir(file_path)
 
-    # sd.get_image_info('/Volumes/LUMIX/DCIM163_PANA')
     if media_table is not None:
 
         deps_data_raw = uc.map_to_camtrap_deployment(
@@ -110,39 +114,21 @@ def generate_media_datasets(file_path:str=None, input_data:dict=None) -> list:
     media_data = None
     image_batch = os.listdir(file_path)
 
-    # print(f'image_batch = {image_batch}')
-
-    # sd.get_image_info('/Volumes/LUMIX/DCIM163_PANA')
     if image_batch is not None:
 
-        # camtrap_tags = ['Make', 'Model']
         media_raw_data = []
         media_row_blank = uc.get_media_table_schema()
         media_row = None
 
         with ExifToolHelper() as et:
             for image in image_batch:
-                # print(f'img ==== {file_path}/{image} - {os.path.isfile(f"{file_path}/{image}")}')
 
                 if os.path.isfile(f'{file_path}/{image}') == True: # and re.find(r'\.[jpg|cr2|rw2|]', image.lower()) is not None:
 
-                    # try:
-
-                    # image_row = {}
-                    # for tags in et.get_tags(f'{file_path}/{image}', tags=camtrap_tags):
-                    #     # for tags in et.get_tags("/Volumes/LUMIX/DCIM/162_PANA/P1620389.JPG", tags=camtrap_tags):
-                    #     for k, v in tags.items():
-                    #         # if v is not None:
-                    #         image_row[k] = v
-                    
                     media_row = uc.map_to_camtrap_media(
                         media_table=media_row_blank, input_data=input_data,
                         media_file_path=f"{file_path}/{image}")
-                    # print(f'media_row = {media_row}')
                     media_raw_data.append(media_row)
-                    
-                    # except:
-                    #     print('skipping non-file input')
                         
         media_data = DataFrame(media_raw_data)
         media_data.to_csv()
@@ -151,22 +137,18 @@ def generate_media_datasets(file_path:str=None, input_data:dict=None) -> list:
 
 
 def generate_observations_datasets(
-        # file_path:str=None, 
         media_table:list=None, 
         input_data:dict=None) -> list:
     '''Get sdUploader + image inputs for observations'''
     
     obs_data_raw = None
     obs_table_blank = uc.get_observations_table_schema()
-    # image_batch = os.listdir(file_path)
 
-    # sd.get_image_info('/Volumes/LUMIX/DCIM163_PANA')
     if media_table is not None:
 
         obs_data_raw = uc.map_to_camtrap_observations(
             observations_table = obs_table_blank,
             input_data = input_data,
-            # media_file_path = file_path,
             media_table = media_table
         )
         obs_data = DataFrame([obs_data_raw])
@@ -204,13 +186,6 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
     # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
     # descriptor = get_camtrap_dp_data(file_path)
 
-
-    # Get camera image + exif data for media.csv
-    # media_table = setup_media_dataset(file_path)
-    # media_table = uc.get_media_table_schema()
-    # print(media_table)
-
-
     # Setup output datapackage
     # TODO - replace metadata/descriptor example with real-data inputs
     # TODO - replace deployments example with real-data inputs
@@ -239,7 +214,11 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
     observations_resource = convert_dataset_to_resource(dataset = observations_data,
                                                         data_name = 'observations')
 
-    data_resources = [deployments_resource, media_resource, observations_resource]
+    data_resources = [
+        deployments_resource,
+        media_resource,
+        observations_resource
+        ]
         
     output_camtrap = get_camtrap_dp_metadata(
         file_path_raw = file_path_raw, 
@@ -247,19 +226,23 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None, sd_data_entry_info:dict=Non
         camtrap_config_urls = camtrap_config_urls,
         resources_prepped = data_resources
         )
+    
+    print('# # # START OUTPUT Camtrap-dp # # # #')
+    print(output_camtrap.__str__)
+    print('# # # END OUTPUT Camtrap-dp # # # #')
 
     # Validate Camtrap-DP
     # TODO - output validation log
     # valid = output_camtrap.validate_package()
     # print(f'# # # VALID Camtrap-dp? {valid}')
 
+
     # Alternatively, validate using frictionless
     valid_frictionless = validate(output_camtrap)
     print(f'# # # VALID Camtrap-dp? {valid_frictionless}')
 
-    # Output Camtrap-DP
-    # TODO - write out to appropriate place
 
+    # Output Camtrap-DP
     output_result = uc.save(package_metadata = output_camtrap, 
                             output_path="test_camtrap_output")
     print(f'# # # OUTPUT Camtrap-dp? {output_result}')

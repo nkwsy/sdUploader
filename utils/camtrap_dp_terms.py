@@ -4,7 +4,6 @@ from datetime import datetime
 from dotenv import dotenv_values
 from exiftool import ExifToolHelper
 from pandas import DataFrame
-from frictionless import Package
 import json, os, re, requests, uuid, zipfile
 
 
@@ -16,12 +15,7 @@ camtrap_media_schema_url = f'{camtrap_base_url}{config["CAMTRAP_MEDIA_SCHEMA"]}'
 camtrap_observations_schema_url = f'{camtrap_base_url}{config["CAMTRAP_OBSERVATIONS_SCHEMA"]}'
 
 
-# Setup Deployment table/csv following Camtrap-DP Deployments schema
-# # Referencing Trapper's deployments-related django serializer for a start (minus pandas, Django)
-# # https://gitlab.com/trapper-project/trapper/-/blob/master/trapper/trapper-project/trapper/apps/geomap/serializers.py#LC237
-
-
-def get_camtrap_dp_profile() -> list:
+def get_camtrap_dp_profile(camtrap_profile_url) -> list:
     '''get profile from camtrap-dp repo'''
 
     # TODO - SETUP dynamic ref to camtrap profile
@@ -30,27 +24,78 @@ def get_camtrap_dp_profile() -> list:
     return camtrap_profile
 
 
-def map_camtrap_dp_profile(camtrap_profile:str=None, generate_uuid4:bool=True) -> list:
+def map_camtrap_dp_ur_profile(
+        camtrap_profile:str=camtrap_profile_url, 
+        data_entry_info:dict=None,
+        generate_uuid4:bool=True
+        ) -> dict:
 
-    if generate_uuid4:
+    dp_metadata_dict = get_camtrap_dp_profile(camtrap_profile_url)
+
+    if generate_uuid4 == True:
         dp_id = str(uuid.uuid4())
+        print(f'# # # # # # DP_ID = {dp_id}')
 
-    dp_metadata = {
+    dp_metadata_mapped = {
         'resources' : [],
-        'profile' : camtrap_profile_url, 
-        'name' : None, 
+        'profile' : camtrap_profile,  # camtrap_profile_url, 
+        'name' : 'test-project-name-with-location-and-id', 
         'id' : dp_id, 
         'created' : str(datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%SZ')), # TODO - input data
         'title' : None, 
-        'contributors' : [],
+        'contributors' : [
+            # NOTE - maybe best to split hardcoded parts out to a config file
+            {
+                'title' : data_entry_info['photographer'],
+                'role:' : 'contributor',
+                'organization' : data_entry_info['photographer']
+            },
+            {
+                "title": "Nick Wesley",
+                "email": "team@urbanriv.org", # TODO - confirm w/ NW
+                "path": "",  # TODO - setup/add https://orcid.org w/ NW
+                "role": "contact",
+                "organization": "Urban Rivers"
+            },
+            {
+                "title": "Urban Rivers",
+                "path": "https://www.urbanriv.org",
+                "role": "rightsHolder"
+            },
+            {
+                "title": "Urban Rivers",
+                "path": "https://www.urbanriv.org", 
+                "role": "publisher"
+            }
+            ],
         'description': None,
         'version' : config["CAMTRAP_VERSION"],
         'keywords' : [],
         'image' : None,
-        'homepage' : None,
+        'homepage' : 'https://www.urbanriv.org',
         'sources' : [],
         'bibliographicCitation': None,
-        'project' : None,
+        'licenses': [
+            {
+                "name": "CC0-1.0",  # TODO - confirm w/ UR
+                "scope": "data"
+            },
+            {
+                "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
+                "scope": "media"
+            }
+            ],
+        'project' : {
+            'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
+            'id' : dp_id,
+            'acronym' : '',
+            'description' : '',
+            'path' : 'https://www.urbanriv.org',
+            'samplingDesign' : 'opportunistic',
+            'captureMethod' : ['activityDetection', 'timeLapse'],
+            'individualAnimals' : False,
+            'observationLevel' : ['media', 'event']
+        },
         'spatial' : {},
         'temporal' : {
             'start' : None,
@@ -59,7 +104,14 @@ def map_camtrap_dp_profile(camtrap_profile:str=None, generate_uuid4:bool=True) -
         'taxonomic' : []
         }
     
-    return dp_metadata
+    # validate static deployment mapping against current camtrap DP schema
+    # TODO - split out mapping to config file to make this easier to maintain
+    for key in dp_metadata_mapped.keys():
+        if key not in dp_metadata_dict['allOf'][1]['properties']:
+            raise ValueError(f"map_camtrap_dp_ur_profile needs updated mapping with these fields: {dp_metadata_dict['allOf'][1]['required']}")
+
+    
+    return dp_metadata_mapped
 
 
 def get_image_data(media_file_path:str=None) -> list:
@@ -265,69 +317,37 @@ class CamtrapPackage():
     - https://specs.frictionlessdata.io/data-package
     '''
 
-
     def __init__(
             self, 
-            camtrap_config_urls:dict=None, 
+            # camtrap_config_urls:dict=None, 
             data_entry_info:dict=None,
+            profile_dict:dict=None,
             resources_prepped:list=None,
             ) -> None:
         
-        self.profile = camtrap_config_urls['profile_url']
-        self.name = 'test-project-name-with-location-and-id', # TODO - replace with input
-        self.created = data_entry_info['date']
-        self.description = ''
-        self.keywords = ''
-        self.image = ''
-        self.homepage = 'https://www.urbanriv.org/'
-        self.licenses = [
-            {
-                "name": "CC0-1.0",  # TODO - confirm w/ UR
-                "scope": "data"
-            },
-            {
-                "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
-                "scope": "media"
-            }
-            ]
+        if profile_dict is None:
+            profile_dict = map_camtrap_dp_ur_profile(data_entry_info=data_entry_info)
 
-        self.contributors = [
-            # NOTE - maybe best to split hardcoded parts out to a config file
-            {
-                'title' : data_entry_info['photographer'],
-                'role:' : 'contributor',
-                'organization' : data_entry_info['photographer']
-            },
-            {
-                "title": "Nick Wesley",
-                "email": "", # TODO - confirm w/ NW
-                "path": "",  # TODO - setup/add https://orcid.org w/ NW
-                "role": "contact",
-                "organization": "Urban Rivers"
-            },
-            {
-                "title": "Urban Rivers",
-                "path": "https://www.urbanriv.org",
-                "role": "rightsHolder"
-            },
-            {
-                "title": "Urban Rivers",
-                "path": "https://www.urbanriv.org", 
-                "role": "publisher"
-            }
-            ]
-        
-        self.project = {
-            'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
-            'id' : '',
-            'acronym' : '',
-            'description' : '',
-            'path' : 'https://www.urbanriv.org',
-            'samplingDesign' : 'opportunistic',
-            'captureMethod' : ['activityDetection', 'timeLapse'],
-            'individualAnimals' : False,
-            'observationLevel' : ['media', 'event']
-        }
+        self.id = profile_dict['id']
+        self.profile = profile_dict['profile']  # camtrap_config_urls['profile_url']
+        self.name = profile_dict['name'], # TODO - replace with input
+        self.title = profile_dict['title'], # TODO - replace with input
+        self.created = data_entry_info['date']
+        self.description = profile_dict['description']
+        self.version = profile_dict['version']
+        self.keywords = profile_dict['keywords']
+        self.image = profile_dict['image']
+        self.homepage = profile_dict['homepage']
+        self.sources = profile_dict['sources']
+        self.bibliographicCitation = profile_dict['bibliographicCitation']
+        self.licenses = profile_dict['licenses']
+
+        self.contributors = profile_dict['contributors']
+        self.project = profile_dict['project']
+
+        self.spatial = profile_dict['spatial']
+        self.temporal = profile_dict['temporal']
+        self.taxonomic = profile_dict['taxonomic']
 
         self.resources = resources_prepped
 
@@ -343,8 +363,6 @@ def save(
     Based on camtrap-package's 'save' function
     - https://gitlab.com/oscf/camtrap-package/-/blame/master/src/camtrap_package/package.py?ref_type=heads#L301
     '''
-    # if not validate(package):
-    #     return False
 
     # mkdir if output_path does not exist
     if output_path:
@@ -355,24 +373,25 @@ def save(
 
     descriptor = package_metadata
     print(f'descriptor = = {descriptor}')
+    print(f'current dir: {os.curdir}')
 
     # dump descriptor
     with open("datapackage.json", "w") as _file:
-        json.dump(descriptor, _file, indent=4, sort_keys=sort_keys)
+        json.dump(descriptor.__dict__, _file, indent=4, sort_keys=sort_keys)
 
     # create zipfile (if requested)
-    zip_name = f"camtrap-dp-{descriptor['id']}.zip"
+    zip_name = f"camtrap-dp-{descriptor.id}.zip"
     if make_archive:
         with zipfile.ZipFile(zip_name, "w") as zipf:
             zipf.write(
-                os.path.join(output_path, "deployments.csv"),
+                os.path.join("deployments.csv"),
                 arcname="deployments.csv",
             )
             zipf.write(
-                os.path.join(output_path, "media.csv"), arcname="media.csv"
+                os.path.join("media.csv"), arcname="media.csv"
             )
             zipf.write(
-                os.path.join(output_path, "observations.csv"),
+                os.path.join("observations.csv"),
                 arcname="observations.csv",
             )
             zipf.write("datapackage.json")

@@ -23,28 +23,48 @@ def get_camtrap_dp_profile(camtrap_profile_url) -> list:
 
     return camtrap_profile
 
+def get_sduploader_input() -> dict:
+    '''get input data entered by camera crew when offloading SD cards'''
+
+    # TODO - Determine how/where sdUploader should output that data
+
+    if config['MODE'] == "TEST":
+        data_entry_info = {
+            'photographer':'test-PHOTOGRAPHER',
+            'camera':'test-CAMERA', 
+            'date': datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S-06:00'), 
+            'location': 'test-LOCATION', 
+            'notes': 'test-NOTES'
+            }
+    
+    return data_entry_info
 
 def map_camtrap_dp_ur_profile(
-        camtrap_profile:str=camtrap_profile_url, 
-        data_entry_info:dict=None,
+        camtrap_profile:str=camtrap_profile_url,
         generate_uuid4:bool=True
         ) -> dict:
+    '''map camera crew's input data to camtrap-dp metadata'''
 
     dp_metadata_dict = get_camtrap_dp_profile(camtrap_profile_url)
+
+    data_entry_info = get_sduploader_input()
 
     if generate_uuid4 == True:
         dp_id = str(uuid.uuid4())
         print(f'# # # # # # DP_ID = {dp_id}')
+    
+    dp_name_raw = f"{data_entry_info['location']}-{data_entry_info['camera']}-{data_entry_info['date']}".lower()
+    dp_name_prepped = re.sub(r'[^a-z0-9\-._/]', '-', dp_name_raw)
+    dp_title = f"Urban Rivers - {data_entry_info['camera']} at {data_entry_info['location']} on {data_entry_info['date']}"
 
     dp_metadata_mapped = {
         'resources' : [],
-        'profile' : camtrap_profile,  # camtrap_profile_url, 
-        'name' : 'test-project-name-with-location-and-id', 
-        'id' : dp_id, 
-        'created' : str(datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%SZ')), # TODO - input data
-        'title' : None, 
+        'profile' : camtrap_profile,
+        'name' : dp_name_prepped,
+        'id' : dp_id,
+        'created' : datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%SZ'),
+        'title' : dp_title,
         'contributors' : [
-            # NOTE - maybe best to split hardcoded parts out to a config file
             {
                 'title' : data_entry_info['photographer'],
                 'role:' : 'contributor',
@@ -52,8 +72,8 @@ def map_camtrap_dp_ur_profile(
             },
             {
                 "title": "Nick Wesley",
-                "email": "team@urbanriv.org", # TODO - confirm w/ NW
-                "path": "",  # TODO - setup/add https://orcid.org w/ NW
+                "email": "team@urbanriv.org",
+                "path": "https://orcid.org/0000-0000",  # TODO - replace
                 "role": "contact",
                 "organization": "Urban Rivers"
             },
@@ -68,25 +88,26 @@ def map_camtrap_dp_ur_profile(
                 "role": "publisher"
             }
             ],
-        'description': None,
+        'description': str(),
         'version' : config["CAMTRAP_VERSION"],
-        'keywords' : [],
-        'image' : None,
+        'keywords' : ['Urban Rivers', 'urban wildlife', 'camera traps'],
+        'image' : str(),
         'homepage' : 'https://www.urbanriv.org',
         'sources' : [],
-        'bibliographicCitation': None,
+        'bibliographicCitation': str(),
         'licenses': [
+            # TODO - confirm w/ UR
             {
-                "name": "CC0-1.0",  # TODO - confirm w/ UR
+                "name": "CC0-1.0",
                 "scope": "data"
             },
             {
-                "path": "http://creativecommons.org/licenses/by/4.0/",  # TODO - confirm w/ UR
+                "path": "http://creativecommons.org/licenses/by/4.0/",
                 "scope": "media"
             }
             ],
         'project' : {
-            'title' : 'Urban Rivers - Camera Trap Project 2024',  # TODO - confirm project-info w/ UR
+            'title' : 'Urban Rivers - Camera Trap Project 2024',
             'id' : dp_id,
             'acronym' : '',
             'description' : '',
@@ -96,10 +117,16 @@ def map_camtrap_dp_ur_profile(
             'individualAnimals' : False,
             'observationLevel' : ['media', 'event']
         },
-        'spatial' : {},
+        'spatial' : {
+            'type' : "Point",
+            'coordinates' : [
+                41.907144,  # TODO - check for camera metadata?
+                -87.652254
+            ]
+        },
         'temporal' : {
-            'start' : None,
-            'end' : None
+            'start' : "",
+            'end' : ""
         },
         'taxonomic' : []
         }
@@ -117,14 +144,8 @@ def map_camtrap_dp_ur_profile(
 def get_image_data(media_file_path:str=None) -> list:
     '''get a list of EXIF data for directory of images'''
 
-    # image_batch = os.listdir(media_file_path)
-
     image_info_list = []
     image_info = {}
-
-    # if len(image_batch) > 0:
-
-    #     if re.findall('', image_batch[0].lower()) is not None:
 
     with ExifToolHelper() as et:
         # image = image_batch[0]
@@ -165,8 +186,8 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "longitude" : None,    # lat/long
         "latitude" : None,     # lat/long
         "coordinateUncertainty" : None, # integer
-        "deploymentStart" : media_table['timestamp'].min(),  # datetime - get min from media_table
-        "deploymentEnd" : media_table['timestamp'].max(),    # datetime - get max from media_table
+        "deploymentStart" : media_table['timestamp'].min(),
+        "deploymentEnd" : media_table['timestamp'].max(),
         "deploymentGroups" : None,
         "deploymentTags" : None,
         "deploymentComments" : None,
@@ -237,8 +258,11 @@ def map_to_camtrap_media(media_table:list=None,
             "mediaComments" : None
         }
 
+        print(f'row summary -- mediaID: {media_map["mediaID"]} | timestamp: {media_map["timestamp"]}')
+        # print(image)
+
     # TODO - split out mapping to config file to make this easier to maintain
-    print(f'media table = {media_table[0]}')
+
     for key in media_map.keys():
         if key not in media_table[0]:
             raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {media_table[0].keys()}')
@@ -272,7 +296,7 @@ def map_to_camtrap_observations(observations_table:list=None,
     obs_map = {
         "observationID" : None,
         "deploymentID" : deploy_id,
-        "mediaID" : media_table['mediaID'], # TODO - fix
+        "mediaID" : None,  #  media_table['mediaID'], # TODO - fix
         "eventID" : None,
         "eventStart" : None,
         "eventEnd" : None,
@@ -304,7 +328,6 @@ def map_to_camtrap_observations(observations_table:list=None,
     # validate static deployment mapping against current camtrap DP schema
     # TODO - split out mapping to config file to make this easier to maintain
     for key in obs_map:
-        print(f'obs key = {key}')
         if key not in observations_table[0].keys():
             raise ValueError(f'map_to_camtrap_observations needs updated mapping: fields must be one of {observations_table[0].keys()}')
     
@@ -323,16 +346,18 @@ class CamtrapPackage():
             data_entry_info:dict=None,
             profile_dict:dict=None,
             resources_prepped:list=None,
+            media_table:list=None
             ) -> None:
         
         if profile_dict is None:
-            profile_dict = map_camtrap_dp_ur_profile(data_entry_info=data_entry_info)
+            profile_dict = map_camtrap_dp_ur_profile()
 
         self.id = profile_dict['id']
         self.profile = profile_dict['profile']  # camtrap_config_urls['profile_url']
-        self.name = profile_dict['name'], # TODO - replace with input
-        self.title = profile_dict['title'], # TODO - replace with input
-        self.created = data_entry_info['date']
+        
+        self.name = profile_dict['name'] # TODO - replace with input
+        self.title = profile_dict['title'] # TODO - replace with input
+        self.created = profile_dict['created'] 
         self.description = profile_dict['description']
         self.version = profile_dict['version']
         self.keywords = profile_dict['keywords']
@@ -346,11 +371,25 @@ class CamtrapPackage():
         self.project = profile_dict['project']
 
         self.spatial = profile_dict['spatial']
-        self.temporal = profile_dict['temporal']
+        self.temporal = get_temporal_data(media_table)
         self.taxonomic = profile_dict['taxonomic']
 
         self.resources = resources_prepped
 
+def get_temporal_data(media_table):
+
+    start = media_table['timestamp'].min()
+    end = media_table['timestamp'].max()
+
+    temporal_data = {
+        'start' : start,
+        'end' : end
+    }
+
+    return temporal_data
+
+def __str__():
+    pass
 
 def save(
         package_metadata=None,
@@ -367,32 +406,34 @@ def save(
     # mkdir if output_path does not exist
     if output_path:
         os.makedirs(output_path, exist_ok=True)
-        os.chdir(output_path)
+        # os.chdir(output_path)
     else:
         output_path = ''
 
     descriptor = package_metadata
-    print(f'descriptor = = {descriptor}')
-    print(f'current dir: {os.curdir}')
 
-    # dump descriptor
-    with open("datapackage.json", "w") as _file:
+    # write descriptor
+    with open(f"{output_path}/datapackage.json", "w") as _file:
         json.dump(descriptor.__dict__, _file, indent=4, sort_keys=sort_keys)
 
     # create zipfile (if requested)
-    zip_name = f"camtrap-dp-{descriptor.id}.zip"
+    zip_name = f"{output_path}/camtrap-dp-{descriptor.id}.zip"
     if make_archive:
         with zipfile.ZipFile(zip_name, "w") as zipf:
             zipf.write(
-                os.path.join("deployments.csv"),
+                f"{output_path}/deployments.csv",
                 arcname="deployments.csv",
             )
             zipf.write(
-                os.path.join("media.csv"), arcname="media.csv"
+                f"{output_path}/media.csv", 
+                arcname="media.csv"
             )
             zipf.write(
-                os.path.join("observations.csv"),
+                f"{output_path}/observations.csv",
                 arcname="observations.csv",
             )
-            zipf.write("datapackage.json")
+            zipf.write(
+                f"{output_path}/datapackage.json",
+                arcname="datapackage.json"
+                )
     return True

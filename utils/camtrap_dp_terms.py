@@ -6,7 +6,6 @@ from exiftool import ExifToolHelper
 from pandas import DataFrame
 import json, os, re, requests, uuid, zipfile
 
-
 config = dotenv_values()
 camtrap_base_url = f'{config["CAMTRAP_BASE_URL"]}/{config["CAMTRAP_VERSION"]}'
 camtrap_profile_url = f'{camtrap_base_url}{config["CAMTRAP_PROFILE"]}'
@@ -62,7 +61,7 @@ def map_camtrap_dp_ur_profile(
         'profile' : camtrap_profile,
         'name' : dp_name_prepped,
         'id' : dp_id,
-        'created' : datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%SZ'),
+        'created' : datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S-06:00'),
         'title' : dp_title,
         'contributors' : [
             {
@@ -183,8 +182,8 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "deploymentID" : deploy_id,
         "locationID" : '',  # TODO
         "locationName" : input_data['location'],
-        "longitude" : None,    # lat/long
-        "latitude" : None,     # lat/long
+        "longitude" : 41.907144,    # lat/long
+        "latitude" : -87.652254,     # lat/long
         "coordinateUncertainty" : None, # integer
         "deploymentStart" : media_table['timestamp'].min(),
         "deploymentEnd" : media_table['timestamp'].max(),
@@ -283,55 +282,89 @@ def get_observations_table_schema() -> list:
     return obs_table
 
 
+# def get_observation_input(media_table:dict=None) -> dict:
+    
+
+#     observation_table = []
+
+#     # TODO - Determine how/where sdUploader should output that data
+#     if media_table is not None:
+#         for row in media_table:
+#             observation_data = {
+#                 'observationID' :  f"{row['mediaID']}_1",
+#                 'mediaID' : row['mediaID'] ,
+#                 'deploymentID' : row['deploymentID'],
+#                 'eventStart' : row['timestamp'],
+#                 'eventEnd' : row['timestamp']
+#                 }
+#             observation_table.append(observation_data)
+    
+#     # if config['MODE'] == "TEST":
+    
+#     return observation_table
+
+
 def map_to_camtrap_observations(observations_table:list=None, 
-                                input_data:list=None, 
-                                # media_file_path:str=None,
+                                # input_data:list=None, 
                                 media_table:DataFrame=None) -> list:
     '''map input fields & files to camtrap-dp observations table fields'''
 
-    # first_image_info = get_image_data(media_file_path)[0]
+    obs_map = []
+    obs_map_prepped = []
+    row_prepped = {}
 
-    deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
+    # TODO - get observations parsed from [camera crew &/or MegaDetector when ready]
+    if media_table is not None:
+        obs_map = media_table[['mediaID', 'deploymentID', 'timestamp']].to_dict('records')
 
-    obs_map = {
-        "observationID" : None,
-        "deploymentID" : deploy_id,
-        "mediaID" : None,  #  media_table['mediaID'], # TODO - fix
-        "eventID" : None,
-        "eventStart" : None,
-        "eventEnd" : None,
-        "observationLevel" : None,
-        "observationType" : None,
-        "cameraSetupType" : None,
-        # "taxonID" : None,
-        "scientificName" : None,
-        "count" : None,
-        "lifeStage" : None,
-        "sex" : None,
-        "behavior" : None,
-        "individualID" : None,
-        "individualPositionRadius" : None,
-        "individualPositionAngle" : None,
-        "individualSpeed" : None,
-        "bboxX" : None,
-        "bboxY" : None,
-        "bboxWidth" : None,
-        "bboxHeight" : None,
-        "classificationMethod" : None,
-        "classifiedBy" : None,
-        "classificationTimestamp" : None,
-        "classificationProbability" : None,
-        "observationTags" : None,
-        "observationComments" : None
-        }
-    
+        for row in obs_map:
+
+            row_prepped = {}
+
+            row_prepped = {
+                'observationID' : row['mediaID'] + '_1',
+                'mediaID' : row['mediaID'],
+                'deploymentID' : row['deploymentID'],
+                'eventStart' : row['timestamp'],
+                'eventEnd' : row['timestamp'],
+                'observationLevel' : 'media',
+                'observationType' : 'unclassified',
+                "eventID" : None,
+                "eventStart" : None,
+                "eventEnd" : None,
+                "observationLevel" : None,
+                "observationType" : None,
+                "cameraSetupType" : None,
+                "scientificName" : None,
+                "count" : None,
+                "lifeStage" : None,
+                "sex" : None,
+                "behavior" : None,
+                "individualID" : None,
+                "individualPositionRadius" : None,
+                "individualPositionAngle" : None,
+                "individualSpeed" : None,
+                "bboxX" : None,
+                "bboxY" : None,
+                "bboxWidth" : None,
+                "bboxHeight" : None,
+                "classificationMethod" : None,
+                "classifiedBy" : None,
+                "classificationTimestamp" : None,
+                "classificationProbability" : None,
+                "observationTags" : None,
+                "observationComments" : None
+                }
+
+            obs_map_prepped.append(row_prepped)
+
     # validate static deployment mapping against current camtrap DP schema
     # TODO - split out mapping to config file to make this easier to maintain
-    for key in obs_map:
+    for key in obs_map_prepped[0]:
         if key not in observations_table[0].keys():
             raise ValueError(f'map_to_camtrap_observations needs updated mapping: fields must be one of {observations_table[0].keys()}')
     
-    return obs_map
+    return obs_map_prepped
 
 class CamtrapPackage():
     '''
@@ -413,11 +446,17 @@ def save(
     descriptor = package_metadata
 
     # write descriptor
-    with open(f"{output_path}/datapackage.json", "w") as _file:
-        json.dump(descriptor.__dict__, _file, indent=4, sort_keys=sort_keys)
+    with open(f"{output_path}/datapackage.json", "w", encoding="utf-8") as _file:
+        json.dump(descriptor.__dict__, 
+                  _file,
+                  indent=4, 
+                  sort_keys=sort_keys)
+
+    camtrap_id = f'{descriptor.id}'
+    print(f'Camtrap ID for filename === {camtrap_id}')
 
     # create zipfile (if requested)
-    zip_name = f"{output_path}/camtrap-dp-{descriptor.id}.zip"
+    zip_name = f"{output_path}/camtrap-dp-{camtrap_id}.zip"
     if make_archive:
         with zipfile.ZipFile(zip_name, "w") as zipf:
             zipf.write(

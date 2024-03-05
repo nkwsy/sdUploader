@@ -1,7 +1,7 @@
 '''DRAFT - Setup camtrap-dp package'''
 ''' - from https://gitlab.com/oscf/camtrap-package '''
 
-import os
+import json, os, time
 import sdUploader as sd
 import utils.camtrap_dp_terms as uc
 # from camtrap_package import package
@@ -107,9 +107,18 @@ def generate_deployments_datasets(
 
         print(f'deps_data_raw = {deps_data_raw}')
         deps_data = DataFrame([deps_data_raw])
-        deps_data.to_csv(f"{camtrap_config_urls['output']}/deployments.csv", index=False)
+
+        dep_data_filename = f"{camtrap_config_urls['output']}/deployments.csv"
+
+        deps_data.to_csv(dep_data_filename, 
+                         index=False,
+                         # na_rep='',
+                         )
         
         print(f'deployments_data = {deps_data}')
+
+        deps_data_valid = validate(dep_data_filename)
+        print(f'deps data validations:  {deps_data_valid}')
 
     return deps_data
 
@@ -135,16 +144,23 @@ def generate_media_datasets(file_path:str=None, input_data:dict=None) -> list:
                         media_table=media_row_blank, input_data=input_data,
                         media_file_path=f"{file_path}/{image}")
                     media_raw_data.append(media_row)
-                        
+
+        media_data_filename = f"{camtrap_config_urls['output']}/media.csv"
+
         media_data = DataFrame(media_raw_data)
-        media_data.to_csv(f"{camtrap_config_urls['output']}/media.csv", index=False)
+        media_data.to_csv(media_data_filename, 
+                          index=False,
+                          # na_rep=''
+                          )
+        
+        media_data_valid = validate(media_data_filename)
+        print(f'media data validations:  {media_data_valid}')
 
     return media_data
 
 
 def generate_observations_datasets(
-        media_table:list=None, 
-        input_data:dict=None) -> list:
+        media_table:list=None) -> list:
     '''Get sdUploader + image inputs for observations'''
     
     obs_data_raw = None
@@ -154,13 +170,21 @@ def generate_observations_datasets(
 
         obs_data_raw = uc.map_to_camtrap_observations(
             observations_table = obs_table_blank,
-            input_data = input_data,
             media_table = media_table
         )
-        obs_data = DataFrame([obs_data_raw])
-        obs_data.to_csv(f"{camtrap_config_urls['output']}/observations.csv", index=False)
+
+        obs_data_filename = f"{camtrap_config_urls['output']}/observations.csv"
+
+        obs_data = DataFrame(obs_data_raw)
+        obs_data.to_csv(obs_data_filename, 
+                        index=False,
+                        # na_rep=''
+                        )
         
         print(f'observations_data = {obs_data}')
+
+        obs_data_valid = validate(obs_data_filename)
+        print(f'obs data validations:  {obs_data_valid}')
     
     return obs_data
 
@@ -201,8 +225,7 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
         )
 
     observations_data = generate_observations_datasets(
-        media_table = media_data, 
-        input_data = data_entry_info
+        media_table = media_data
         )
     
     deployments_resource = convert_dataset_to_resource(dataset = deployments_data,
@@ -242,20 +265,47 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
 
     output_result = uc.save(package_metadata = output_camtrap, 
                             output_path = output_path)
-    print(f'# # # OUTPUT Camtrap-dp? {output_result} - ')
+    print(f'# # # OUTPUT Camtrap-dp? {output_result}')
 
+    # Pause to complete output
+    time.sleep(2)
 
-    # Alternatively, validate using frictionless
+    # Validate output ZIP file using frictionless
+    if output_result == True:
+        if os.path.exists(output_camtrap_file):
+            print(f'Validating output...May take a minute...')
 
-    valid_frictionless = validate(output_camtrap_file)
-    print(f'# # # VALID Camtrap-dp? {valid_frictionless} - {output_camtrap_file}')
+            # with open(f'{output_path}/datapackage.json', 'r', encoding = 'utf-8') as file:
+            #     camtrap_dp_json = json.load(file)
+            
+            # url = camtrap_config_urls['profile_url']
+            # response = requests.get(url)
+            # response.raise_for_status()
+            # print(f'response code for {url} == {response.status_code}')
 
+            # if (
+            #     response.status_code != 204 and
+            #     response.headers["content-type"].strip().startswith("application/json")
+            #     ):
+            #     try:
+            #         print(f'testing url response for {url} -- -- {response.json()}')
+            #     except ValueError:
+            #         print('value error...')
+
+            valid_frictionless = validate(output_camtrap, # f'{output_path}/datapackage.json', # output_camtrap,
+                                        #   type = "package"
+                                          )
+            # print(f"# # # VALID Camtrap-dp? {valid_frictionless['valid']}")
+            print(f"...outputing validation details to '{output_camtrap.id}-validation.json'")
+
+            with open(f"{output_path}/{output_camtrap.id}-validation.json", "w", encoding='utf-8') as file:
+                json.dump(valid_frictionless.to_dict(), file, indent=4, sort_keys=False)
 
     # Cleanup
     for file in ['datapackage.json', 'deployments.csv', 'media.csv', 'observations.csv']:
         out_file = f'{output_path}/{file}'
         if os.path.exists(out_file):
-            print(f'removing {out_file}')
+            print(f'cleanup -- removing {out_file}')
             os.remove(out_file)
 
 if __name__ == "__main__":

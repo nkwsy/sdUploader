@@ -1,10 +1,9 @@
 '''DRAFT - Setup camtrap-dp package'''
 ''' - from https://gitlab.com/oscf/camtrap-package '''
 
-import json, os, time
+import json, os, re
 import sdUploader as sd
 import utils.camtrap_dp_terms as uc
-# from camtrap_package import package
 from dotenv import dotenv_values
 from exiftool import ExifToolHelper
 from frictionless import validate
@@ -23,34 +22,13 @@ camtrap_config_urls['output'] = config['CAMTRAP_OUTPUT_DIR']
 
 def get_camtrap_dp_metadata(
         file_path_raw:sd.SdXDevice = None, 
-        sd_data_entry_info:dict = None,
+        # sd_data_entry_info:dict = None,
         resources_prepped:list = None,
         media_table:list = None
-        ) -> dict:
-    '''Get sdUploader inputs for datapackage.json'''
-
-    if config['MODE'] == "TEST":
-        file_path = config['TEST_SD_FILE_PATH']
-        data_entry_info = {
-            'photographer':'test-PHOTOGRAPHER',
-            'camera':'test-CAMERA', 
-            'date':'test-DATE', 
-            'location': 'test-DEPLOYMENT-LOCATION', 
-            'notes': 'test-NOTES',
-            }
-        
-    else: 
-        file_path = file_path_raw.mountpoint
-        data_entry_info = sd_data_entry_info
-        
-    print(f'file path = = = {file_path}')
-
-    # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
-    # descriptor = get_camtrap_dp_data(file_path)
+        ) -> uc.CamtrapPackage:
+    '''Setup metadata + resources datapackage.json as a camtrap package'''
     
     descriptor = uc.CamtrapPackage(
-        # camtrap_config_urls=camtrap_config_urls,
-        data_entry_info = data_entry_info,
         profile_dict = None,
         resources_prepped = resources_prepped,
         media_table = media_table)
@@ -58,8 +36,7 @@ def get_camtrap_dp_metadata(
     return descriptor
 
 
-def convert_dataset_to_resource(
-        dataset:DataFrame=None, 
+def setup_dataset_as_resource(
         data_name:str=None, 
         camtrap_config_urls:dict=camtrap_config_urls
         ) -> dict:
@@ -68,7 +45,7 @@ def convert_dataset_to_resource(
     valid_data_name = ['deployments', 'media', 'observations']
 
     if data_name not in valid_data_name:
-        raise ValueError(f'convert_dataset_to_resource: data_name must be one of {valid_data_name}')
+        raise ValueError(f'setup_dataset_as_resource: data_name must be one of {valid_data_name}')
     
     data_path = f'{data_name}.csv'
     # dataset.to_csv(data_path, index = False)
@@ -105,17 +82,16 @@ def generate_deployments_datasets(
             media_table = media_table
         )
 
-        print(f'deps_data_raw = {deps_data_raw}')
         deps_data = DataFrame([deps_data_raw])
 
         dep_data_filename = f"{camtrap_config_urls['output']}/deployments.csv"
 
         deps_data.to_csv(dep_data_filename, 
                          index=False,
-                         # na_rep='',
                          )
         
-        print(f'deployments_data = {deps_data}')
+        print(f'deployments_data preview:')
+        print(deps_data[:5])
 
         deps_data_valid = validate(dep_data_filename)
         print(f'deps data validations:  {deps_data_valid}')
@@ -140,17 +116,21 @@ def generate_media_datasets(file_path:str=None, input_data:dict=None) -> list:
 
                 if os.path.isfile(f'{file_path}/{image}') == True: # and re.find(r'\.[jpg|cr2|rw2|]', image.lower()) is not None:
 
-                    media_row = uc.map_to_camtrap_media(
-                        media_table=media_row_blank, input_data=input_data,
-                        media_file_path=f"{file_path}/{image}")
-                    media_raw_data.append(media_row)
+                    # Skip hidden .DS_Store files if present
+                    if len(re.findall(r".*DS_Store.*", f'{file_path}/{image}')) > 0:
+                        pass
+                    else:
+
+                        media_row = uc.map_to_camtrap_media(
+                            media_table=media_row_blank, input_data=input_data,
+                            media_file_path=f"{file_path}/{image}")
+                        media_raw_data.append(media_row)
 
         media_data_filename = f"{camtrap_config_urls['output']}/media.csv"
 
         media_data = DataFrame(media_raw_data)
         media_data.to_csv(media_data_filename, 
                           index=False,
-                          # na_rep=''
                           )
         
         media_data_valid = validate(media_data_filename)
@@ -178,10 +158,10 @@ def generate_observations_datasets(
         obs_data = DataFrame(obs_data_raw)
         obs_data.to_csv(obs_data_filename, 
                         index=False,
-                        # na_rep=''
                         )
         
-        print(f'observations_data = {obs_data}')
+        print(f'observations_data preview: ')
+        print(obs_data[:5])
 
         obs_data_valid = validate(obs_data_filename)
         print(f'obs data validations:  {obs_data_valid}')
@@ -197,15 +177,13 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
     '''
 
     if config['MODE'] == "TEST":
-        file_path = config['TEST_SD_FILE_PATH']
+        file_path = config['INPUT_IMAGE_DIR']
         
     else: 
         # TODO - check if mountpoint sd.SdXDevice is interchangeable with str
         file_path = file_path_raw.mountpoint
 
     data_entry_info = uc.get_sduploader_input()
-        
-    print(f'file path = = = {file_path}')
 
     # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
     # descriptor = get_camtrap_dp_data(file_path)
@@ -228,13 +206,13 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
         media_table = media_data
         )
     
-    deployments_resource = convert_dataset_to_resource(dataset = deployments_data,
+    deployments_resource = setup_dataset_as_resource(dataset = deployments_data,
                                                        data_name = 'deployments')
 
-    media_resource = convert_dataset_to_resource(dataset = media_data,
+    media_resource = setup_dataset_as_resource(dataset = media_data,
                                                  data_name = 'media')
 
-    observations_resource = convert_dataset_to_resource(dataset = observations_data,
+    observations_resource = setup_dataset_as_resource(dataset = observations_data,
                                                         data_name = 'observations')
 
     data_resources = [
@@ -245,19 +223,15 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
         
     output_camtrap = get_camtrap_dp_metadata(
         file_path_raw = file_path_raw, 
-        sd_data_entry_info = data_entry_info,
+        # sd_data_entry_info = data_entry_info,
         resources_prepped = data_resources,
         media_table = media_data
         )
     
-    print(f'# # # # # # camtrap data START # # # #')
-    print(output_camtrap.__dict__)
-    print(f'# # # # # # camtrap data FINISH # # # #')
+    # print(f'# # # # # # camtrap data START # # # #')
+    # print(output_camtrap.__dict__)
+    # print(f'# # # # # # camtrap data FINISH # # # #')
 
-    # Validate Camtrap-DP
-    # TODO - output validation log
-    # valid = output_camtrap.validate_package()
-    # print(f'# # # VALID Camtrap-dp? {valid}')
 
     # Output Camtrap-DP
     output_path = camtrap_config_urls['output']
@@ -267,38 +241,17 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
                             output_path = output_path)
     print(f'# # # OUTPUT Camtrap-dp? {output_result}')
 
-    # Pause to complete output
-    time.sleep(2)
 
     # Validate output ZIP file using frictionless
     if output_result == True:
         if os.path.exists(output_camtrap_file):
             print(f'Validating output...May take a minute...')
 
-            # with open(f'{output_path}/datapackage.json', 'r', encoding = 'utf-8') as file:
-            #     camtrap_dp_json = json.load(file)
-            
-            # url = camtrap_config_urls['profile_url']
-            # response = requests.get(url)
-            # response.raise_for_status()
-            # print(f'response code for {url} == {response.status_code}')
+            valid_frictionless = validate(output_camtrap_file)
 
-            # if (
-            #     response.status_code != 204 and
-            #     response.headers["content-type"].strip().startswith("application/json")
-            #     ):
-            #     try:
-            #         print(f'testing url response for {url} -- -- {response.json()}')
-            #     except ValueError:
-            #         print('value error...')
+            print(f"...outputing validation details to 'validation-{output_camtrap.id}.json'")
 
-            valid_frictionless = validate(output_camtrap, # f'{output_path}/datapackage.json', # output_camtrap,
-                                        #   type = "package"
-                                          )
-            # print(f"# # # VALID Camtrap-dp? {valid_frictionless['valid']}")
-            print(f"...outputing validation details to '{output_camtrap.id}-validation.json'")
-
-            with open(f"{output_path}/{output_camtrap.id}-validation.json", "w", encoding='utf-8') as file:
+            with open(f"{output_path}/validation-{output_camtrap.id}.json", "w", encoding='utf-8') as file:
                 json.dump(valid_frictionless.to_dict(), file, indent=4, sort_keys=False)
 
     # Cleanup

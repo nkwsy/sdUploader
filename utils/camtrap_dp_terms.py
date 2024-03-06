@@ -27,14 +27,14 @@ def get_sduploader_input() -> dict:
 
     # TODO - Determine how/where sdUploader should output that data
 
-    if config['MODE'] == "TEST":
-        data_entry_info = {
-            'photographer':'test-PHOTOGRAPHER',
-            'camera':'test-CAMERA', 
-            'date': datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%M:%S-06:00'), 
-            'location': 'test-LOCATION', 
-            'notes': 'test-NOTES'
-            }
+    data_entry_info = {}
+
+    sd_input_path = config['INPUT_SDUPLOADER_DATA_ENTRY']
+
+    if os.path.exists(sd_input_path):
+        with open(sd_input_path) as file:
+            data_raw = file.read()
+        data_entry_info = json.loads(data_raw)
     
     return data_entry_info
 
@@ -50,7 +50,6 @@ def map_camtrap_dp_ur_profile(
 
     if generate_uuid4 == True:
         dp_id = str(uuid.uuid4())
-        print(f'# # # # # # DP_ID = {dp_id}')
     
     dp_name_raw = f"{data_entry_info['location']}-{data_entry_info['camera']}-{data_entry_info['date']}".lower()
     dp_name_prepped = re.sub(r'[^a-z0-9\-._/]', '-', dp_name_raw)
@@ -147,9 +146,8 @@ def get_image_data(media_file_path:str=None) -> list:
     image_info = {}
 
     with ExifToolHelper() as et:
-        # image = image_batch[0]
-            image_info = et.get_tags(f'{media_file_path}', tags = None)
-            image_info_list.append(image_info)
+        image_info = et.get_tags(f'{media_file_path}', tags = None)
+        image_info_list.append(image_info)
     
     return image_info_list
 
@@ -174,7 +172,6 @@ def map_to_camtrap_deployment(deployment_table:list=None,
     '''map input fields & files to camtrap-dp deployments table fields'''
 
     first_image_info = get_image_data(media_file_path)[0][0]
-    print(f'map-to-camtraps first_image_info = = {first_image_info}')
 
     deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
 
@@ -182,8 +179,8 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "deploymentID" : deploy_id,
         "locationID" : '',  # TODO
         "locationName" : input_data['location'],
-        "longitude" : 41.907144,    # lat/long
-        "latitude" : -87.652254,     # lat/long
+        "latitude" : 41.907144,
+        "longitude" : -87.652254,
         "coordinateUncertainty" : None, # integer
         "deploymentStart" : media_table['timestamp'].min(),
         "deploymentEnd" : media_table['timestamp'].max(),
@@ -195,7 +192,6 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "cameraModel" : f"{first_image_info['EXIF:Make']}-{first_image_info['EXIF:Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
         "cameraDelay" : None, # integer
         "cameraDepth" : None,   # float
-        # "cameraInterval" : None, # integer
         "cameraHeight" : None,   # float
         "cameraTilt" : None,     # float
         "cameraHeading" : None,
@@ -257,16 +253,15 @@ def map_to_camtrap_media(media_table:list=None,
             "mediaComments" : None
         }
 
-        print(f'row summary -- mediaID: {media_map["mediaID"]} | timestamp: {media_map["timestamp"]}')
-        # print(image)
+        print(f'{media_file_path} -->  mediaID: {media_map["mediaID"]} | timestamp: {media_map["timestamp"]}')
 
-    # TODO - split out mapping to config file to make this easier to maintain
+        # TODO - split out mapping to config file to make this easier to maintain
 
-    for key in media_map.keys():
-        if key not in media_table[0]:
-            raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {media_table[0].keys()}')
+        for key in media_map.keys():
+            if key not in media_table[0]:
+                raise ValueError(f'map_to_camtrap_deployment needs updated mapping: fields must be one of {media_table[0].keys()}')
 
-    return media_map
+        return media_map
 
 
 def get_observations_table_schema() -> list:
@@ -283,7 +278,6 @@ def get_observations_table_schema() -> list:
 
 
 # def get_observation_input(media_table:dict=None) -> dict:
-    
 
 #     observation_table = []
 
@@ -305,7 +299,6 @@ def get_observations_table_schema() -> list:
 
 
 def map_to_camtrap_observations(observations_table:list=None, 
-                                # input_data:list=None, 
                                 media_table:DataFrame=None) -> list:
     '''map input fields & files to camtrap-dp observations table fields'''
 
@@ -366,6 +359,20 @@ def map_to_camtrap_observations(observations_table:list=None,
     
     return obs_map_prepped
 
+
+def get_temporal_data(media_table):
+
+    start = media_table['timestamp'].min()
+    end = media_table['timestamp'].max()
+
+    temporal_data = {
+        'start' : start,
+        'end' : end
+    }
+
+    return temporal_data
+
+
 class CamtrapPackage():
     '''
     Sets up a frictionless data package following the camtrap-dp exchange format. [Hopefully.]
@@ -375,21 +382,19 @@ class CamtrapPackage():
 
     def __init__(
             self, 
-            # camtrap_config_urls:dict=None, 
-            data_entry_info:dict=None,
             profile_dict:dict=None,
             resources_prepped:list=None,
             media_table:list=None
             ) -> None:
         
         if profile_dict is None:
-            profile_dict = map_camtrap_dp_ur_profile()
+            profile_dict = map_camtrap_dp_ur_profile() # TODO - check this pulls input
 
         self.id = profile_dict['id']
-        self.profile = profile_dict['profile']  # camtrap_config_urls['profile_url']
+        self.profile = profile_dict['profile']
         
-        self.name = profile_dict['name'] # TODO - replace with input
-        self.title = profile_dict['title'] # TODO - replace with input
+        self.name = profile_dict['name']
+        self.title = profile_dict['title']
         self.created = profile_dict['created'] 
         self.description = profile_dict['description']
         self.version = profile_dict['version']
@@ -409,20 +414,8 @@ class CamtrapPackage():
 
         self.resources = resources_prepped
 
-def get_temporal_data(media_table):
-
-    start = media_table['timestamp'].min()
-    end = media_table['timestamp'].max()
-
-    temporal_data = {
-        'start' : start,
-        'end' : end
-    }
-
-    return temporal_data
-
-def __str__():
-    pass
+    def __str__():
+        pass
 
 def save(
         package_metadata=None,
@@ -439,7 +432,6 @@ def save(
     # mkdir if output_path does not exist
     if output_path:
         os.makedirs(output_path, exist_ok=True)
-        # os.chdir(output_path)
     else:
         output_path = ''
 
@@ -448,9 +440,9 @@ def save(
     # write descriptor
     with open(f"{output_path}/datapackage.json", "w", encoding="utf-8") as _file:
         json.dump(descriptor.__dict__, 
-                  _file,
-                  indent=4, 
-                  sort_keys=sort_keys)
+                _file,
+                indent=4, 
+                sort_keys=sort_keys)
 
     camtrap_id = f'{descriptor.id}'
     print(f'Camtrap ID for filename === {camtrap_id}')

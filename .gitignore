@@ -5,4 +5,7 @@ venv/*
 temp/*
 test/*
 build/*
+
+.DS_Store
 sdUploader.log
+test_camtrap_output

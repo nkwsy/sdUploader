@@ -1,2 +1,0 @@
-deploymentID,locationID,locationName,longitude,latitude,coordinateUncertainty,deploymentStart,deploymentEnd,deploymentGroups,deploymentTags,deploymentComments,setupBy,cameraID,cameraModel,cameraDelay,cameraDepth,cameraHeight,cameraTilt,cameraHeading,detectionDistance,timestampIssues,baitUse,featureType,habitat
-test-LOCATION-test-DATE-test-CAMERA,,test-LOCATION,,,,2023-10-07T09:32:03-0600,2023-10-07T10:32:16-0600,,,,,,Panasonic-DMC-GH4,,,,,,,,,,

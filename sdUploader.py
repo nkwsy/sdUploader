@@ -340,7 +340,6 @@ def parse_date(date_string):
     if date_string is None:
         return None
     return datetime.strptime(date_string, '%Y:%m:%d %H:%M:%S')
-
 ############# SD drive util
 #TODO use mountpoint or something else to make sure you do not accidently mount important drive. 
     
@@ -359,6 +358,7 @@ def check_sd(test_dir = NONE):
     devices = []
     for drive in dp:
         device = drive.device
+        print(f"device={device}")
         mountpoint = drive.mountpoint
         if is_sdX_device(device):
             devices.append(SdXDevice(drive))

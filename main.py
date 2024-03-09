@@ -370,7 +370,7 @@ def check_sd_loop():
             start_gui()
 
 if __name__ == "__main__":
-    check_sd_loop()
+    start_gui()
     # sd_card_detected = check_sd_loop()
     # if sd_card_detected:
         # root = tk.Tk()

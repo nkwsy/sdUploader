@@ -20,7 +20,7 @@ import psutil
 from exiftool import ExifToolHelper
 
 logger.add(sys.stderr, level="INFO")
-logger.add("sdUploader.log", rotation="5 MB")
+logger.add("logs/sdUploader.log", rotation="5 MB")
 load_dotenv()
 
 # Set default values
@@ -335,8 +335,6 @@ def handle_exif_data(img_path):
         # if tag == 'Make' or tag == 'Model':
         #     print(f"{tag}: {value}")
 
-
-
 #TODO Check if exif standardizes date info
 def parse_date(date_string):
     if date_string is None:
@@ -346,15 +344,16 @@ def parse_date(date_string):
 #TODO use mountpoint or something else to make sure you do not accidently mount important drive. 
     
 def is_sdX_device(device_string):
-    '''Check if a mounted storage device is an SD card'''
-    sd_card_device_string = os.getenv("SD_CARD_MATCH_STRING")
-    if sd_card_device_string is None:
-        sd_card_device_string = "/dev/sd[b-z]"
-    match = re.match(rf'{sd_card_device_string}', device_string)
-    # match = re.match(r'/dev/sd[b-z]', device_string)
+    ### see if device string is a valid sdX device
+    ### DOES NOT WORK FOR /dev/sda as it's the main drive
+    #TODO find if drive is main drive and do not use it w/o manually ommiting sda
+
+    # match = re.match(r'/dev/sd[a-z]', device_string)
+    match = re.match(r'/dev/sd[b-z]', device_string)
     return match is not None
 
-def check_sd():
+def check_sd(test_dir = NONE):
+    # Get all disk partitions
     dp = psutil.disk_partitions()
     devices = []
     for drive in dp:

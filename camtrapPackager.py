@@ -206,14 +206,20 @@ def prep_camtrap_dp(file_path_raw:sd.SdXDevice=None):
         media_table = media_data
         )
     
-    deployments_resource = setup_dataset_as_resource(dataset = deployments_data,
-                                                       data_name = 'deployments')
+    deployments_resource = setup_dataset_as_resource(
+        # dataset = deployments_data,
+        data_name = 'deployments'
+        )
 
-    media_resource = setup_dataset_as_resource(dataset = media_data,
-                                                 data_name = 'media')
+    media_resource = setup_dataset_as_resource(
+        # dataset = media_data,
+        data_name = 'media'
+        )
 
-    observations_resource = setup_dataset_as_resource(dataset = observations_data,
-                                                        data_name = 'observations')
+    observations_resource = setup_dataset_as_resource(
+        # dataset = observations_data,
+        data_name = 'observations'
+        )
 
     data_resources = [
         deployments_resource,

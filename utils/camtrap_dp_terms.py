@@ -184,22 +184,22 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         "coordinateUncertainty" : None, # integer
         "deploymentStart" : media_table['timestamp'].min(),
         "deploymentEnd" : media_table['timestamp'].max(),
-        "deploymentGroups" : None,
-        "deploymentTags" : None,
-        "deploymentComments" : None,
         "setupBy" : None,
         "cameraID" : None,  # from list
         "cameraModel" : f"{first_image_info['EXIF:Make']}-{first_image_info['EXIF:Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
         "cameraDelay" : None, # integer
-        "cameraDepth" : None,   # float
         "cameraHeight" : None,   # float
+        "cameraDepth" : None,   # float
         "cameraTilt" : None,     # float
         "cameraHeading" : None,
         "detectionDistance" : None,
         "timestampIssues" : None,
         "baitUse" : None,
         "featureType" : None,
-        "habitat" : None
+        "habitat" : None,
+        "deploymentGroups" : None,
+        "deploymentTags" : None,
+        "deploymentComments" : None
         }
     
     # validate static deployment mapping against current camtrap DP schema
@@ -316,17 +316,13 @@ def map_to_camtrap_observations(observations_table:list=None,
 
             row_prepped = {
                 'observationID' : row['mediaID'] + '_1',
-                'mediaID' : row['mediaID'],
                 'deploymentID' : row['deploymentID'],
+                'mediaID' : row['mediaID'],
+                "eventID" : None,
                 'eventStart' : row['timestamp'],
                 'eventEnd' : row['timestamp'],
                 'observationLevel' : 'media',
                 'observationType' : 'unclassified',
-                "eventID" : None,
-                "eventStart" : None,
-                "eventEnd" : None,
-                "observationLevel" : None,
-                "observationType" : None,
                 "cameraSetupType" : None,
                 "scientificName" : None,
                 "count" : None,

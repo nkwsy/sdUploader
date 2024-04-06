@@ -3,5 +3,16 @@ __pycache__
 test_upload/*
 venv/*
 temp/*
+<<<<<<< HEAD
 test/*
 build/*
+
+.DS_Store
+=======
+test*/*
+build/*
+
+.DS*
+token.pickle
+>>>>>>> 0d2cffd656bcb321cac16b94a050ac52bf2c8cef
+*.log

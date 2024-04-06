@@ -346,8 +346,12 @@ def parse_date(date_string):
 #TODO use mountpoint or something else to make sure you do not accidently mount important drive. 
     
 def is_sdX_device(device_string):
-    # match = re.match(r'/dev/sd[a-z]', device_string)
-    match = re.match(r'/dev/sd[b-z]', device_string)
+    '''Check if a mounted storage device is an SD card'''
+    sd_card_device_string = os.getenv("SD_CARD_MATCH_STRING")
+    if sd_card_device_string is None:
+        sd_card_device_string = "/dev/sd[b-z]"
+    match = re.match(rf'{sd_card_device_string}', device_string)
+    # match = re.match(r'/dev/sd[b-z]', device_string)
     return match is not None
 
 def check_sd():
@@ -355,6 +359,7 @@ def check_sd():
     devices = []
     for drive in dp:
         device = drive.device
+        print(f"device={device}")
         mountpoint = drive.mountpoint
         if is_sdX_device(device):
             devices.append(SdXDevice(drive))

@@ -3,5 +3,9 @@ __pycache__
 test_upload/*
 venv/*
 temp/*
-test/*
+test*/*
 build/*
+
+.DS*
+token.pickle
+*.log

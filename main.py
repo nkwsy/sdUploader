@@ -197,7 +197,7 @@ class SDCardUploaderGUI:
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
         ttk.Label(manual_frame, text="No spaces please as this names folder. For 'Wildlife_Camera', select from drop-down.").grid(column=2, row=4, sticky=W)
-        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=('BubblyCreek', 'Prologis','WildMile_ZoneA', 'WildMile_ZoneB', 'WildMile_ZoneC', 'WildMile_ZoneD'))
+        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=('BubblyCreek', 'Prologis','WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D'))
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))
 
         self.notes = StringVar()

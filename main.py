@@ -59,6 +59,9 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
 
+        self.download_thread = None
+        self.download_thread = None
+
         # self.create_manual_upload_frame()
 
 
@@ -259,7 +262,7 @@ class SDCardUploaderGUI:
         self.temp_folder = sd.create_temp_folder()
         logger.info(f"Gui Starting upload from {self.drive.device} to {self.temp_folder}")
         self.locked = True
-        self.upload_thread = start_download(self.drive.mountpoint, self.temp_folder)
+        self.download_thread = start_download(self.drive.mountpoint, self.temp_folder)
         
         # Start updating the progress in the GUI periodically (e.g., every 1 second)
         self.update_progress()
@@ -276,16 +279,25 @@ class SDCardUploaderGUI:
         # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
         logger.info(f"Progress: {int(progress_value['progress_percent'] * 100)}%")
 
-        # Check if the upload thread is alive, if yes, continue updating
-        if self.upload_thread.is_alive():
+        # Check if the download thread is alive, if yes, continue updating
+        if self.download_thread.is_alive():
             self.master.after(1000, self.update_progress)  # Update every second
         else:
-            logger.info("Upload completed!")
-            self.progress_text.set("100%")
-            self.locked = False
-            messagebox.showinfo("Upload Complete", "Upload Complete")
-            self.wipeSDWindow(self.drive.mountpoint)
-            self.download_complete()
+            ud_progress = sd.get_upload_progress(self.drive.mountpoint, self.temp_folder)
+            if ud_progress['progress_percent'] == 1:
+                logger.info("Upload completed!")
+                self.progress_text.set("100%")
+                # self.locked = False
+                self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
+                messagebox.showinfo("Upload Complete", "Upload Complete")
+                self.wipeSDWindow(self.drive.mountpoint)
+                # self.download_complete()
+            else:
+                logger.warning("Upload failed!")
+                self.progress_text.set("Upload failed!")
+                self.locked = False
+                messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
+                self.confirm_btn.config(state=tk.NORMAL)
             
     def download_complete(self):
         self.locked = True
@@ -318,7 +330,17 @@ class SDCardUploaderGUI:
             except OSError as e:
                 logger.error("Error: %s - %s." % (e.filename, e.strerror))
             pass
-
+    
+    def check_if_working(self):
+        if self.locked == True:
+            if self.upload_thread.is_alive():
+                time.sleep(5)
+            if self.download_thread.is_alive():
+                time.sleep(5)
+            else:
+                self.locked = False
+        else:
+            pass
     def create_file_tree(self):
         self.tree = ttk.Treeview(self.master)
         self.tree.heading('#0', text='Directory Structure')
@@ -338,8 +360,12 @@ def on_closing(app_instance):
     logger.info(f"Closing GUI: app_instance.locked = {app_instance.locked}")
     root.withdraw()
     if app_instance.locked == True:
-        logger.warning("Upload in progress, please wait")
-        time.sleep(10)
+        app_instance.check_if_working()
+        logger.warning("on_closing checked app")
+        while app_instance.locked == True:
+            logger.warning("Waiting for upload to finish")
+            time.sleep(10)
+        time.sleep(3)
     root.quit()
         
 def start_gui():
@@ -370,11 +396,8 @@ def check_sd_loop():
             start_gui()
 
 if __name__ == "__main__":
-    check_sd_loop()
-    # sd_card_detected = check_sd_loop()
-    # if sd_card_detected:
-        # root = tk.Tk()
-        # root.mainloop()
+    # check_sd_loop()
+    start_gui()
 
 ############## GUI
 # root = Tk()

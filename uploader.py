@@ -19,7 +19,7 @@ def uploadFiles(*args):
     file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = home_folder  + str(camera.get())+ ''.join(args)
     year_folder = str(dateEntry.get_date().year)
-    folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + location.get() + ' '.join()
+    folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + cameraid.get() + '_'.join()
     args = sys.argv[1:]
     today = datetime.now()
 

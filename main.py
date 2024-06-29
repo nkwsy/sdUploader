@@ -190,19 +190,13 @@ class SDCardUploaderGUI:
         # Camera ID
         self.cameraid = StringVar()
         ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
-        ttk.Label(manual_frame, text="See camera inventory sheet: tinyurl.com/bdhmzhme").grid(column=2, row=2, sticky=W)
-        self.cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera, values=('UR001', 'UR002', 'UR003', 'UR004', 'UR005'))
-        self.cameraEntry.grid(column=1, row=2, sticky=(W, E))
-
-        # Date Entry
-        self.date = StringVar()
-        ttk.Label(manual_frame, text="Date").grid(column=0, row=4, sticky=W)
-        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
-        self.dateEntry.grid(column=1, row=3, sticky=(W, E))
+        ttk.Label(manual_frame, text="See camera inventory sheet: tinyurl.com/bdhmzhme").grid(column=2, row=3, sticky=W)
+        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=('UR001', 'UR002', 'UR003', 'UR004', 'UR005'))
+        self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
         
         # Location
         self.location = StringVar()
-        ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=5, sticky=W)
+        ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
         ttk.Label(manual_frame, text="No spaces please. Use drop-down if possible. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
         self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(
             'BC_Floating_A', 'BC_Floating_B', 
@@ -213,10 +207,17 @@ class SDCardUploaderGUI:
             )
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))
 
+        # Date Entry
+        self.date = StringVar()
+        ttk.Label(manual_frame, text="Date").grid(column=0, row=5, sticky=W)
+        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
+        self.dateEntry.grid(column=1, row=5, sticky=(W, E))
+
         self.notes = StringVar()
         ttk.Label(manual_frame, text="Notes").grid(column=0, row=6, sticky=W)
         self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
-        self.notesEntry.grid(column=1, row=5, sticky=(W, E))
+        self.notesEntry.grid(column=1, row=6, sticky=(W, E))
+
         submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
         submit_button.grid(row=8, column=1, padx=10, pady=10)
 

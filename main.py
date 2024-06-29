@@ -191,7 +191,12 @@ class SDCardUploaderGUI:
         self.cameraid = StringVar()
         ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
         ttk.Label(manual_frame, text="See camera inventory sheet: tinyurl.com/bdhmzhme").grid(column=2, row=3, sticky=W)
-        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=('UR001', 'UR002', 'UR003', 'UR004', 'UR005'))
+        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(
+            'UR001', 'UR002', 'UR003', 'UR004', 'UR005',
+            'UR006', 'UR007', 'UR008', 'UR009', 'UR010',
+            'UR011', 'UR012', 'UR013', 'UR014', 'UR015',
+            'UR016', 'UR017', 'UR018', 'UR019', 'UR020',
+            'UR_ROV', 'UR_360', 'UR_DR1', 'UR_DR2'))
         self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
         
         # Location

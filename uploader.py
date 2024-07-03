@@ -14,12 +14,19 @@ from datetime import datetime
 # Insert appropriate path and files extention.
 
 def uploadFiles(*args):
+    '''setup folders based on camera, date, and either cameraId or location, then copy files'''
     sd_photo_folder = '/home/lin/test/' # example: '/media/mycard/disk/DCIM/'
     home_folder = '/home/lin/testrec/'
     file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = home_folder  + str(camera.get())+ ''.join(args)
     year_folder = str(dateEntry.get_date().year)
-    folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + cameraid.get() + '_'.join()
+    
+    # If cameraId is missing, use location in folder name instead
+    folder_suffix = cameraid.get()
+    if folder_suffix is None or folder_suffix == '': 
+        folder_suffix = location.get()
+    
+    folder_name = dateEntry.get_date().strftime('%Y-%m-%d') + folder_suffix + '_'.join()
     args = sys.argv[1:]
     today = datetime.now()
 

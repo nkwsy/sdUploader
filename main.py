@@ -182,28 +182,47 @@ class SDCardUploaderGUI:
 
         # Camera Type
         self.camera = StringVar()
-        ttk.Label(manual_frame, text="Camera").grid(column=0, row=2, sticky=W)
+        ttk.Label(manual_frame, text="Camera Type").grid(column=0, row=2, sticky=W)
         ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
         self.cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera, values=('360Camera', 'Drone', 'GoPro' , 'Wildlife_Camera', 'DSLR','Underwater_GoPro', 'Mixed', 'Other'))
         self.cameraEntry.grid(column=1, row=2, sticky=(W, E))
 
-        # Date Entry
-        self.date = StringVar()
-        ttk.Label(manual_frame, text="Date").grid(column=0, row=3, sticky=W)
-        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
-        self.dateEntry.grid(column=1, row=3, sticky=(W, E))
+        # Camera ID
+        self.cameraid = StringVar()
+        ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
+        ttk.Label(manual_frame, text="Recommended - See camera inventory: tinyurl.com/bdhmzhme").grid(column=2, row=3, sticky=W)
+        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(
+            'UR001', 'UR002', 'UR003', 'UR004', 'UR005',
+            'UR006', 'UR007', 'UR008', 'UR009', 'UR010',
+            'UR011', 'UR012', 'UR013', 'UR014', 'UR015',
+            'UR016', 'UR017', 'UR018', 'UR019', 'UR020',
+            'UR_ROV', 'UR_360', 'UR_DR1', 'UR_DR2'))
+        self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
         
         # Location
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-        ttk.Label(manual_frame, text="No spaces please as this names folder. For 'Wildlife_Camera', select from drop-down.").grid(column=2, row=4, sticky=W)
-        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=('BubblyCreek', 'Prologis','WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D', 'WM_Boardwalk_E', 'WM_Boardwalk_F', 'WM_Boardwalk_G'))
+        ttk.Label(manual_frame, text="Required - No spaces please. Use drop-down if possible. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
+        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(
+            'BC_Floating_A', 'BC_Floating_B', 
+            'SB_Prologis_A',
+            'TC_TurtCitay_DockA', 'TC_TurtCitay_WreckA',
+            'WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D', 'WM_Boardwalk_E', 'WM_Boardwalk_F', 'WM_Boardwalk_G',
+            'WMDIS_A', 'WMDIS_B')
+            )
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))
 
+        # Date Entry
+        self.date = StringVar()
+        ttk.Label(manual_frame, text="Date").grid(column=0, row=5, sticky=W)
+        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
+        self.dateEntry.grid(column=1, row=5, sticky=(W, E))
+
         self.notes = StringVar()
-        ttk.Label(manual_frame, text="Notes").grid(column=0, row=5, sticky=W)
+        ttk.Label(manual_frame, text="Notes").grid(column=0, row=6, sticky=W)
         self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
-        self.notesEntry.grid(column=1, row=5, sticky=(W, E))
+        self.notesEntry.grid(column=1, row=6, sticky=(W, E))
+
         submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
         submit_button.grid(row=8, column=1, padx=10, pady=10)
 
@@ -214,6 +233,7 @@ class SDCardUploaderGUI:
                                 'date':self.dateEntry.get_date(), 
                                 'location': self.location.get(), 
                                 'notes': self.notes.get(),
+                                'cameraid':self.cameraid.get(), 
                                 # 'file_list': sd.get_files_in_folder(dir.get())
                                 }
         print(self.data_entry_info)

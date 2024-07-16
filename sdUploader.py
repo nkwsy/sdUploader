@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog as fd
 import tkcalendar
+import json
 import os
 import sys
 import shutil
@@ -152,13 +153,16 @@ def copy_directory_contents(src_dir, dst_dir):
         os.makedirs(dst_dir)
     logger.info(f'Copying files from {src_dir} to {dst_dir}')
     for item in os.listdir(src_dir):
+        print(item)
         src_item = os.path.join(src_dir, item)
         dst_item = os.path.join(dst_dir, item)
         
         # Check if item is a directory
         if os.path.isdir(src_item):
+            print(f'copying DIR: {item}')
             shutil.copytree(src_item, dst_item)
         else:
+            print(f'copying FILE: {item}')
             shutil.copy2(src_item, dst_item)
 
 def start_copy(src_dir):
@@ -190,23 +194,32 @@ def get_directory_size(directory):
             if entry.is_file():
                 total += entry.stat().st_size
             elif entry.is_dir():
-                total += get_directory_size(entry.path)
+                if len(re.findall(r'^\.', entry.name)) < 1:
+                    total += get_directory_size(entry.path)
     return total
-# pass camera, dateEntry/date, location, file_list, info,
+# pass camera, dateEntry/date, location, file_list, info, cameraid
 # 
 def simple_upload_files(src_dir, camera_info):
     camera = camera_info.get('camera', 'to_be_sorted')
-    date = camera_info.get('date', datetime.now())
+    date = camera_info.get('date', datetime.now().strftime('%Y-%m-%d'))
     location = camera_info.get('location', '')
     notes = camera_info.get('notes', '')
+    cameraid = camera_info.get('cameraid', '')
     file_list = camera_info.get('file_list', None)
     info = camera_info.get('info', '')
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = os.path.join(home_folder, camera)
     logger.info(f'camera_info: {camera_info}. base_folder: {base_folder}')
+
     print(date)
     print(type(date))
-    folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"
+
+    # If cameraId is missing, use location in folder name instead
+    folder_suffix = cameraid
+    if folder_suffix is None or folder_suffix == '': 
+        folder_suffix = location
+
+    folder_name = f"{date.strftime('%Y-%m-%d')}_{folder_suffix}"
     today = datetime.now()
     year_folder = f"{date.year}"
     # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
@@ -219,27 +232,45 @@ def simple_upload_files(src_dir, camera_info):
     except FileExistsError as exists:
         print('Folder exists:', exists.filename)
         print('Using existing folder...')
+
     #Copy files
+
     #Progress bar
+
     logger.info(f'Copying files to {output_folder}')
     copy_directory_contents(src_dir, output_folder)
     textFile = output_folder + '/info.txt'
+    jsonFile = output_folder + '/camera_info.json'
     file_list = get_files_in_folder(src_dir)
-    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n\nFile_list\n{file_list}"
+
     print(info)
+    
     with open(textFile, 'w') as f:
         f.write(info)
+    
+    with open(jsonFile, 'w') as f:
+        f.write(json.dumps(camera_info, indent = 2))
+
     logger.info('Finished uploading files!')
+
     with open(src_dir + '/uploaded.txt', 'w') as f:
         f.write(f'{output_folder}\n')
+
     pass
 
-def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
+
+def uploadFiles(camera=None, date=None, location='', notes='', file_list=None, cameraid=''):
     #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
     base_folder = f"{home_folder}{camera}"
     print(date)
     print(type(date))
-    folder_name = f"{date.strftime('%Y-%m-%d')}_{location}"
+    # If cameraId is missing, use location in folder name instead
+    folder_suffix = cameraid
+    if folder_suffix is None or folder_suffix == '': 
+        folder_suffix = location
+
+    folder_name = f"{date.strftime('%Y-%m-%d')}_{folder_suffix}"
     today = datetime.now()
     year_folder = f"{date.year}"
     # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
@@ -261,12 +292,15 @@ def uploadFiles(camera=None, date=None, location='', notes='', file_list=None):
             shutil.copy2(os.path.join( file_name), output_folder)
         except Exception as err:
             logger.error(err)
+
     textFile = output_folder + '/info.txt'
-    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n\nFile_list\n{file_list}"
+    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n\nFile_list\n{file_list}"
+
     print(info)
     with open(textFile, 'w') as f:
         f.write(info)
     logger.info('Finished uploading files!')
+
     pass
 
 #### Download files to local directory

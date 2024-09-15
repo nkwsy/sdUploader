@@ -11,6 +11,7 @@ from datetime import timedelta
 import threading
 from multiprocessing import Process
 import os
+import utils.camtrap_prep_1 as ucp
 
 
 def start_download(src, dst):
@@ -318,7 +319,14 @@ class SDCardUploaderGUI:
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
         # self.master.quit()
-        
+        self.create_camtrap_tables(self.temp_folder)
+
+    def create_camtrap_tables(self, folder):
+        '''
+        After download is complete, prep two corresponding camtrap-dp tables
+        (deployments.csv and media.csv) in the temp folder
+        '''
+        ucp.prep_camtrap_dp(folder)
        
     def browse_button(self):
         filename = fd.askdirectory(initialdir= sd.sd_photo_folder)

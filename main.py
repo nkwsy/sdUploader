@@ -202,12 +202,16 @@ class SDCardUploaderGUI:
         # Location
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-        ttk.Label(manual_frame, text="Required - No spaces please. Use drop-down if possible. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
+        ttk.Label(manual_frame, text="Required. No spaces. Use drop-down or type. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
         self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(
             'BC_Floating_A', 'BC_Floating_B', 
+            'GI_NBranchCanal_A',
+            'RP_EastBank_A', 'RP_SouthWest_B',
             'SB_Prologis_A',
             'TC_TurtCitay_DockA', 'TC_TurtCitay_WreckA',
             'WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D', 'WM_Boardwalk_E', 'WM_Boardwalk_F', 'WM_Boardwalk_G',
+            'WM_Boardwalk_G1', 'WM_Boardwalk_G2', 'WM_Boardwalk_H1', 'WM_Boardwalk_H2', 
+            'WM_Boardwalk_I1', 'WM_Boardwalk_I2', 'WM_Boardwalk_J1', 'WM_Boardwalk_J2',
             'WMDIS_A', 'WMDIS_B')
             )
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))

@@ -211,9 +211,6 @@ def simple_upload_files(src_dir, camera_info):
     base_folder = os.path.join(home_folder, camera)
     logger.info(f'camera_info: {camera_info}. base_folder: {base_folder}')
 
-    print(date)
-    print(type(date))
-
     # If cameraId is missing, use location in folder name instead
     folder_suffix = cameraid
     if folder_suffix is None or folder_suffix == '': 
@@ -250,7 +247,7 @@ def simple_upload_files(src_dir, camera_info):
         f.write(info)
     
     with open(jsonFile, 'w') as f:
-        f.write(json.dumps(camera_info, indent = 2))
+        f.write(json.dumps(camera_info, indent = 2, default=str))
 
     logger.info('Finished uploading files!')
 

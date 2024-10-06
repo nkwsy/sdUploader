@@ -246,7 +246,7 @@ class SDCardUploaderGUI:
                                 }
         print(self.data_entry_info)
         self.upload_confirmation(self.drive)
-
+        
 
     def upload_confirmation(self, drive):
         """Displays a confirmation box with a progress bar and estimated upload time."""
@@ -317,6 +317,7 @@ class SDCardUploaderGUI:
                 messagebox.showinfo("Upload Complete", "Upload Complete")
                 self.wipeSDWindow(self.drive.mountpoint)
                 # self.download_complete()
+                self.create_camtrap_tables(self.data_entry_info)
             else:
                 logger.warning("Upload failed!")
                 self.progress_text.set("Upload failed!")
@@ -331,14 +332,19 @@ class SDCardUploaderGUI:
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
         # self.master.quit()
-        self.create_camtrap_tables(self.temp_folder)
 
-    def create_camtrap_tables(self, folder):
+    def create_camtrap_tables(self, data_entry_info):
         '''
         After download is complete, prep two corresponding camtrap-dp tables
         (deployments.csv and media.csv) in the temp folder
         '''
-        ucp.prep_camtrap_dp(folder)
+        deploy_id = f"{self.data_entry_info['date']}_{self.data_entry_info['cameraid']}"
+        if self.data_entry_info['cameraid'] is None or len(self.data_entry_info['cameraid']) < 1:
+            deploy_id = f"{self.data_entry_info['date']}_{self.data_entry_info['location']}"
+        deploy_type = self.data_entry_info['camera']
+        deploy_year = f"{self.data_entry_info['date']}"[0:4]
+        deploy_home_folder = f"{os.getenv('HOME_FOLDER')}/{deploy_type}/{deploy_year}/{deploy_id}"
+        ucp.prep_camtrap_dp(file_path_raw=deploy_home_folder, data_input=data_entry_info)
        
     def browse_button(self):
         filename = fd.askdirectory(initialdir= sd.sd_photo_folder)

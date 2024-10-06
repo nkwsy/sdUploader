@@ -11,27 +11,27 @@ camtrap_media_schema_url = f'{camtrap_base_url}{config["CAMTRAP_MEDIA_SCHEMA"]}'
 camtrap_observations_schema_url = f'{camtrap_base_url}{config["CAMTRAP_OBSERVATIONS_SCHEMA"]}'
 
 
-# def get_deployment_dir(work_folder:str=None):
-#     '''
-#     Combine the work-folder and deployment id to form / match the server's deployment directory path.
-#     NOTE - When using sdUploader, sd.create_temp_folder() should be used in place of this function
-#     '''
+def get_deployment_dir(work_folder:str=None):
+    '''
+    Combine the work-folder and deployment id to form / match the server's deployment directory path.
+    NOTE - When using sdUploader, sd.create_temp_folder() should be used in place of this function
+    '''
 
-#     # # TODO - Allow / check for CLI input 
-#     # print(config['INPUT_DEPLOY_ID'])
-#     # print(f"{config['WORK_FOLDER']}/{config['INPUT_DEPLOY_ID']}")
-#     # print(os.path.exists(f"{config['WORK_FOLDER']}/{config['INPUT_DEPLOY_ID']}"))
+    # # TODO - Allow / check for CLI input 
+    # print(config['INPUT_DEPLOY_ID'])
+    # print(f"{config['WORK_FOLDER']}/{config['INPUT_DEPLOY_ID']}")
+    # print(os.path.exists(f"{config['WORK_FOLDER']}/{config['INPUT_DEPLOY_ID']}"))
 
-#     if work_folder is None:
-#         if 'WORK_FOLDER' in config:
-#             work_folder = config['WORK_FOLDER']
+    if work_folder is None:
+        if 'WORK_FOLDER' in config:
+            work_folder = config['WORK_FOLDER']
 
-#     if config['INPUT_DEPLOY_ID'] is not None and os.path.exists(f"{work_folder}/{config['INPUT_DEPLOY_ID']}"):
-#         deploy_dir = f"{work_folder}/{config['INPUT_DEPLOY_ID']}"
-#     else:
-#         deploy_dir = f"{work_folder}/{sys.argv[1]}"
+    if config['INPUT_DEPLOY_ID'] is not None and os.path.exists(f"{work_folder}/{config['INPUT_DEPLOY_ID']}"):
+        deploy_dir = f"{work_folder}/{config['INPUT_DEPLOY_ID']}"
+    else:
+        deploy_dir = f"{work_folder}/{sys.argv[1]}"
 
-#     return deploy_dir
+    return deploy_dir
 
 
 def get_image_dirs(deploy_dir):

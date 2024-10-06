@@ -134,13 +134,16 @@ def generate_media_datasets(
             if os.path.isfile(f'{file_path}/{image}') == True: # and re.find(r'\.[jpg|cr2|rw2|]', image.lower()) is not None:
 
                 # Skip hidden .DS_Store files if present
-                if len(re.findall(r".*DS_Store.*", f'{file_path}/{image}')) > 0:
+                if len(re.findall(r".*(DS_Store|\._).*", f'{file_path}/{image}')) > 0:
                     pass
                 else:
 
                     media_row = uc.map_to_camtrap_media(
-                        media_table=media_row_blank, input_data=input_data,
-                        media_file_path=f"{file_path}/{image}")
+                        media_table = media_row_blank, 
+                        input_data = input_data,
+                        media_file_path = f"{file_path}/{image}",
+                        temp_folder = output_path,
+                        )
                     if media_row is not None:
                         media_raw_data.append(media_row)
 
@@ -161,30 +164,35 @@ def generate_media_datasets(
     # Those tables get uploaded to AWS with image files
 
 
-def prep_camtrap_dp(file_path_raw:str=None):  # sd.SdXDevice=None):
-    '''Prep Data from SDuploader media and output it a camtrap-dp dataset'''
+def prep_camtrap_dp(file_path_raw:str=None, data_input:dict=None):  # sd.SdXDevice=None):
     '''
-    TODO - reference these functions in main.SDCardUploaderGUI.data_entry_info? 
-    or split out data_entry_info functions from main.SDCardUploaderGUI ? 
+    Prep Data from SDuploader media and output it as a camtrap-dp dataset
+
+    :param str file_path_raw: File path to a batch of images/media from a camera trap
+    :param dict data_input: Data entered by a user for a given sdUpload media batch
+
     '''
 
-    deploy_dir = uf.get_deployment_dir()
-
+    if file_path_raw is not None:
+        deploy_dir = file_path_raw
+    else:
+        deploy_dir = uf.get_deployment_dir()
     
     print(f"deployment_id directory = {deploy_dir}")
 
-    if config['MODE'] == "TEST":
-        
-        # file_path = f"{deploy_dir}/{config['INPUT_IMAGE_DIR']}"
-        file_path = uf.get_image_dirs(deploy_dir = deploy_dir)
+    # if config['MODE'] == "TEST":
+    file_path = uf.get_image_dirs(deploy_dir = deploy_dir)
 
-        print(f"file path = {file_path}")
+    print(f"file path = {file_path}")
         
     # else: 
     #     # TODO - check if mountpoint sd.SdXDevice is interchangeable with str
     #     file_path = file_path_raw.mountpoint
 
-    data_entry_info = uc.get_sduploader_input()
+    data_entry_info = uc.get_sduploader_input(
+        sd_temp=file_path_raw, 
+        sd_data_entry=data_input
+        )
 
     # # TODO - Get profile + sdUploader-inputs for datapackage.json -- e.g.:
     # descriptor = get_camtrap_dp_data(file_path)
@@ -222,5 +230,14 @@ def prep_camtrap_dp(file_path_raw:str=None):  # sd.SdXDevice=None):
         )
 
 
+def main(file_path_raw:str=None, data_input:dict=None):
+    '''
+    '''
+    if 'CAMTRAP_RUN' in config and config['CAMTRAP_RUN'] == "TRUE":
+        prep_camtrap_dp(file_path_raw, data_input)
+    else:
+        print("Skipping Camtrap-DP setup -- Set .env 'CAMTRAP_RUN' variable to 'TRUE' to not skip.")
+
+
 if __name__ == "__main__":
-    prep_camtrap_dp()
+    main()

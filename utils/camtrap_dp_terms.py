@@ -25,8 +25,30 @@ def get_camtrap_dp_profile(camtrap_profile_url) -> list:
 
     return camtrap_profile
 
-def get_sduploader_input() -> dict:
-    '''get input data entered by camera crew when offloading SD cards'''
+def get_camtrap_locations() -> list:
+    '''
+    Import the list of camtrap-locations and their IDs
+    This CSV is a static copy of the google sheet here:
+    https://docs.google.com/spreadsheets/d/1-urdMw_pEssge15T3p7oWuwRJ6RgApusuKGlzCEuRks/edit?gid=800390175#gid=800390175&range=A1
+    '''
+    
+    return csv_tools.rows('data/camtrap_locations.csv')
+
+def get_camera_inventory() -> list:
+    '''
+    Import the list of camera IDs and corresponding info.
+    This CSV is a static copy of the google sheet here:
+    https://docs.google.com/spreadsheets/d/1-urdMw_pEssge15T3p7oWuwRJ6RgApusuKGlzCEuRks/edit?gid=0#gid=0&range=A2
+    '''
+    
+    return csv_tools.rows('data/camera_inventory.csv')
+
+
+def get_sduploader_input(sd_temp:str=None, sd_data_entry:dict=None) -> dict:
+    '''
+    Get input data entered by camera crew when offloading SD cards.
+    If this is run as part of sdUploader, sd_temp should be path to temp dir
+    '''
 
     # TODO - Determine how/where sdUploader should output that data
 
@@ -40,50 +62,65 @@ def get_sduploader_input() -> dict:
 
     sd_input_path = None
 
-    if 'INPUT_SDUPLOADER_DATA_ENTRY' in config.keys():
-        sd_input_path = config['INPUT_SDUPLOADER_DATA_ENTRY']
+    if sd_data_entry is not None:
 
-    # Read in camera-deployment info from info.txt (or camera_info.json)
-    if sd_input_path is None:
-        # TODO - inherit this from sdUploader input -- info.txt &/or camera_info.json
-        sd_input_dir = f"{config['WORK_FOLDER']}/{config['INPUT_DEPLOY_ID']}/"
-        print(f'SD uploader input dir: {sd_input_dir}')
+        data_entry_info = sd_data_entry
 
-        if os.path.exists(f"{sd_input_dir}info.txt"):
-            sd_input_path = f"{sd_input_dir}info.txt"
+    else:
 
-        elif os.path.exists(f"{sd_input_dir}camera_info.json"):
-            sd_input_path = f"{sd_input_dir}camera_info.json"
+        if sd_temp is not None:
+            sd_input_path = sd_temp
+        elif 'INPUT_SDUPLOADER_DATA_ENTRY' in config.keys():
+            sd_input_path = config['INPUT_SDUPLOADER_DATA_ENTRY']
+        else:
+            print('Missing SD input')
+
+        # Read in camera-deployment info from info.txt (or camera_info.json)
+        if sd_input_path is None:
+            # TODO - inherit this from sdUploader input -- info.txt &/or camera_info.json
+            sd_input_dir = f"{config['HOME_FOLDER']}/{config['INPUT_DEPLOY_ID']}/"
+            print(f'SD uploader input dir: {sd_input_dir}')
+
+            if os.path.exists(f"{sd_input_dir}info.txt"):
+                sd_input_path = f"{sd_input_dir}info.txt"
+
+            elif os.path.exists(f"{sd_input_dir}camera_info.json"):
+                sd_input_path = f"{sd_input_dir}camera_info.json"
+            
+            else:
+                print(f'Missing info.txt or camera_info.json in {sd_input_dir}')
 
 
-    print(f'SD uploader data entry file: {sd_input_path}')
+        print(f'SD uploader data entry file: {sd_input_path}')
 
-    if os.path.exists(sd_input_path):
-        with open(sd_input_path) as file:
-            data_raw = file.read()
+        if os.path.exists(sd_input_path):
+            with open(f'{sd_input_path}/') as file:
+                data_raw = file.read()
 
-        if len(re.findall(r'\.json$', sd_input_path)) > 0:
-            data_entry_info = json.loads(data_raw)
+            if len(re.findall(r'\.json$', sd_input_path)) > 0:
+                data_entry_info = json.loads(data_raw)
 
-        elif sd_input_path.find('info.txt') > -1:
-            data_entry_info_raw = data_raw.split('\n')
-            data_entry_info['photographer'] = 'Urban Rivers'
-            data_entry_info['camera'] = data_entry_info_raw[1]
-            data_entry_info['date'] = data_entry_info_raw[2]
-            data_entry_info['location'] = data_entry_info_raw[0]
-            data_entry_info['notes'] = data_entry_info_raw[3]
-    
+            elif sd_input_path.find('info.txt') > -1:
+                data_entry_info_raw = data_raw.split('\n')
+                data_entry_info['photographer'] = 'Urban Rivers'
+                data_entry_info['camera'] = data_entry_info_raw[1]
+                data_entry_info['date'] = data_entry_info_raw[2]
+                data_entry_info['location'] = data_entry_info_raw[0]
+                data_entry_info['notes'] = data_entry_info_raw[3]
+        
     return data_entry_info
 
 def map_camtrap_dp_ur_profile(
         camtrap_profile:str=camtrap_profile_url,
-        generate_uuid4:bool=False
+        generate_uuid4:bool=False,
+        data_entry_info:dict=None,
         ) -> dict:
     '''map camera crew's input data to camtrap-dp metadata'''
 
     dp_metadata_dict = get_camtrap_dp_profile(camtrap_profile_url)
 
-    data_entry_info = get_sduploader_input()
+    if data_entry_info is None:
+        data_entry_info = get_sduploader_input()
 
     dp_id = ""
     if data_entry_info['date'] is not None and data_entry_info['camera'] is not None:
@@ -244,28 +281,35 @@ def map_to_camtrap_deployment(deployment_table:list=None,
         first_image = get_jpg(media_file_path, search_string='\.(jpg|jpeg)$')
         first_image_info = get_image_data(first_image)[0][0]
 
-    deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
+    # deploy_id = f"{input_data['location']}_{input_data['date']}_{input_data['cameraid']}"
+    deploy_id = f"{input_data['date']}_{input_data['cameraid']}"
+    if input_data['cameraid'] is None or len(input_data['cameraid']) < 1:
+        deploy_id = f"{input_data['date']}_{input_data['location']}"
 
-    # Default lat lon coords are for north end of Wild Mile, and 25m coord-uncertainty:
-    lat_lon = [41.907144, -87.652254]
+    # Get Deployment Zone data
+    zones = pd.DataFrame(get_camtrap_locations())
+    deploy_zone = zones.loc[zones['locationName']== input_data['location']]
 
-    if len(re.findall('prologis', input_data['location'].lower())) > 0:
-        lat_lon = [41.84799, -87.65020]
-    elif len(re.findall('bubbly', input_data['location'].lower())) > 0:
-        lat_lon = [41.842389, -87.664844]
+    # Get Deployment Camera data
+    cameraModel = f"{first_image_info['EXIF:Make']}-{first_image_info['EXIF:Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
+    # NOTE/TODO - Check cameraModel values in camera_inventory.csv
+    if input_data['cameraid'] is not None and len(input_data['cameraid']) > 0:
+        camera_inventory = pd.DataFrame(get_camera_inventory())
+        deployed_cam = camera_inventory.loc[camera_inventory['cameraID']== input_data['cameraid']]
+        cameraModel_alt = deployed_cam['cameraModel'].iloc[0]
 
     deployment_map = {
         "deploymentID" : deploy_id,
-        "locationID" : '',  # TODO
+        "locationID" : deploy_zone['locationID'].iloc[0],  # TODO
         "locationName" : input_data['location'],
-        "latitude" : lat_lon[0],  # 41.907144,
-        "longitude" : lat_lon[1],  # -87.652254,
-        "coordinateUncertainty" : 25, # integer
+        "latitude" : deploy_zone['latitude'].iloc[0],
+        "longitude" : deploy_zone['longitude'].iloc[0],
+        "coordinateUncertainty" : deploy_zone['coordinateUncertainty'].iloc[0], # integer
         "deploymentStart" : media_table['timestamp'].min(),
         "deploymentEnd" : media_table['timestamp'].max(),
         "setupBy" : None,
-        "cameraID" : None,  # from list
-        "cameraModel" : f"{first_image_info['EXIF:Make']}-{first_image_info['EXIF:Model']}",   # concatenate {EXIF:Make}-{EXIF:Model}
+        "cameraID" : input_data['cameraid'], # deployed_cam['cameraID'].iloc[0],
+        "cameraModel" : cameraModel,
         "cameraDelay" : None, # integer
         "cameraHeight" : None,   # float
         "cameraDepth" : None,   # float
@@ -306,6 +350,7 @@ def get_media_table_schema() -> list:
 def map_to_camtrap_media(media_table:list=None,
                          input_data:list=None, 
                          media_file_path:str=None,
+                         temp_folder:str=None,
                          get_google_file_url:bool=False) -> list:
     '''map input fields & files to camtrap-dp media table fields'''
 
@@ -336,7 +381,11 @@ def map_to_camtrap_media(media_table:list=None,
                 image_create_date_iso = time.strftime('%Y-%m-%dT%H:%M:%S-0600', image_create_date_raw_1)
 
             print(f'input_data = {input_data}')
-            deploy_id = f"{input_data['location']}-{input_data['date']}-{input_data['camera']}"
+            # deploy_id = f"{input_data['location']}_{input_data['date']}_{input_data['cameraid']}"
+            deploy_id = f"{input_data['date']}_{input_data['cameraid']}"
+            if input_data['cameraid'] is None or len(input_data['cameraid']) < 1:
+                deploy_id = f"{input_data['date']}_{input_data['location']}"
+
             media_id = re.sub(r'\..+$', '', image['File:FileName'])
 
             # Skip file if it isn't a valid image file with full EXIF metadata
@@ -349,11 +398,11 @@ def map_to_camtrap_media(media_table:list=None,
                 # if get_google_file_url is True:
                 #     image_path = google_file_list.loc[google_file_list['name'] == image['File:FileName'],'webContentLink'].item()
                 # else:
-                # image_path = re.sub(f"{config['WORK_FOLDER']}/", "", image['File:Directory'])
+                # image_path = re.sub(f"{config['HOME_FOLDER']}/", "", image['File:Directory'])
                 path_base = config['S3_BASE_URL']
-                deploy_subdir = re.sub(f"{config['WORK_FOLDER']}/", "", image['File:Directory'])
+                deploy_subdir = deploy_id # re.sub(fr".*{temp_folder}/", "", image['File:Directory'])
                 year_dir = deploy_subdir[0:4]  # TODO - check/validate that this = "YYYY"
-                image_path = f"{path_base}/images/{year_dir}/{deploy_subdir}/{image['File:FileName']}"
+                image_path = f"{path_base}images/{year_dir}/{deploy_subdir}/{image['File:FileName']}"
 
                 media_map = {
                     "mediaID" : media_id,  # Required

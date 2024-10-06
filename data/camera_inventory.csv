@@ -1,0 +1,23 @@
+cameraID,Serial Number,cameraModel,Camera Type,Manufacturer - Model
+UR_ROV,,OpenROV Trident,ROV Camera,
+UR_360,,Insta360 X3,360 Camera,
+UR_DR1,,DJI Mavic Pro,Drone ,DJI
+UR_DR2,,DJI Mavic 2 Pro,Drone ,DJI
+UR001,EN_17013910,BestGuarder SG-880V,Wildlife Camera,
+UR002,,Campark T200,Wildlife Camera,
+UR003,None - Looks like a Bumble Bee,Foxelli UR#001 (previous label),Wildlife Camera,
+UR004,,Spypoint LM2 ,Wildlife Camera,Spypoint - LM2
+UR005,4WKW-CI2-SGE5,Spypoint Link Micro SGE5,Wildlife Camera,Spypoint - LM
+UR006,SORJ-ZTO-LTMR,Spypoint (New Mini) LM2-LMTR,Wildlife Camera,Spypoint - LM2
+UR007,MYQM-7GH-Y2YW,Spypoint LM2-Y2YW,Wildlife Camera,Spypoint - LM2
+UR008,B121014873,Bushnell LPZ 247,Wildlife Camera,Bushnell
+UR009,B110505716,Bushnell LPZ 217,Wildlife Camera,Bushnell
+UR010,None,Bushnell LPZ 118,Wildlife Camera,Bushnell
+UR011,,Reveal_002_Wildmile,Wildlife Camera,Reveal
+UR012,,Reveal_001_Wildmile,Wildlife Camera,Reveal
+UR013,,Reveal_Bubbly,Wildlife Camera,Reveal
+UR014,SK2023070056006,Reveal_Prologis,Wildlife Camera,Reveal
+UR015,465YIWEV2YL,Spypoint LM2 - V2YL - CHONK,Wildlife Camera,Spypoint - LM2
+UR016,XOXF-F7U-GJQL,Spypoint LM2-GJQL,,Spypoint - LM2
+UR017,Q4GM-TGH-Y2YO,Spypoint LM2-Y2YO,Wildlife Camera,Spypoint - LM2
+UR018,HGS4VGHY2YV,Spypoint Link Micro S LTE-V,Wildlife Camera,Spypoint - Micro LTE

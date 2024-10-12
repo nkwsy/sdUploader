@@ -11,6 +11,7 @@ from datetime import timedelta
 import threading
 from multiprocessing import Process
 import os
+import utils.camtrap_prep_1 as ucp
 
 
 def start_download(src, dst):
@@ -205,12 +206,16 @@ class SDCardUploaderGUI:
         # Location
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-        ttk.Label(manual_frame, text="Required - No spaces please. Use drop-down if possible. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
+        ttk.Label(manual_frame, text="Required. No spaces. Use drop-down or type. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
         self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(
             'BC_Floating_A', 'BC_Floating_B', 
+            'GI_NBranchCanal_A',
+            'RP_EastBank_A', 'RP_SouthWest_B',
             'SB_Prologis_A',
             'TC_TurtCitay_DockA', 'TC_TurtCitay_WreckA',
             'WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D', 'WM_Boardwalk_E', 'WM_Boardwalk_F', 'WM_Boardwalk_G',
+            'WM_Boardwalk_G1', 'WM_Boardwalk_G2', 'WM_Boardwalk_H1', 'WM_Boardwalk_H2', 
+            'WM_Boardwalk_I1', 'WM_Boardwalk_I2', 'WM_Boardwalk_J1', 'WM_Boardwalk_J2',
             'WMDIS_A', 'WMDIS_B')
             )
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))
@@ -241,7 +246,7 @@ class SDCardUploaderGUI:
                                 }
         print(self.data_entry_info)
         self.upload_confirmation(self.drive)
-
+        
 
     def upload_confirmation(self, drive):
         """Displays a confirmation box with a progress bar and estimated upload time."""
@@ -312,6 +317,7 @@ class SDCardUploaderGUI:
                 messagebox.showinfo("Upload Complete", "Upload Complete")
                 self.wipeSDWindow(self.drive.mountpoint)
                 # self.download_complete()
+                self.create_camtrap_tables(self.data_entry_info)
             else:
                 logger.warning("Upload failed!")
                 self.progress_text.set("Upload failed!")
@@ -326,7 +332,19 @@ class SDCardUploaderGUI:
         messagebox.showinfo("Done", "All done you schmuck")
         self.locked = False
         # self.master.quit()
-        
+
+    def create_camtrap_tables(self, data_entry_info):
+        '''
+        After download is complete, prep two corresponding camtrap-dp tables
+        (deployments.csv and media.csv) in the temp folder
+        '''
+        deploy_id = f"{self.data_entry_info['date']}_{self.data_entry_info['cameraid']}"
+        if self.data_entry_info['cameraid'] is None or len(self.data_entry_info['cameraid']) < 1:
+            deploy_id = f"{self.data_entry_info['date']}_{self.data_entry_info['location']}"
+        deploy_type = self.data_entry_info['camera']
+        deploy_year = f"{self.data_entry_info['date']}"[0:4]
+        deploy_home_folder = f"{os.getenv('HOME_FOLDER')}/{deploy_type}/{deploy_year}/{deploy_id}"
+        ucp.prep_camtrap_dp(file_path_raw=deploy_home_folder, data_input=data_entry_info)
        
     def browse_button(self):
         filename = fd.askdirectory(initialdir= sd.sd_photo_folder)

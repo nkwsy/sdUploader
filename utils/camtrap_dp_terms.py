@@ -440,6 +440,18 @@ def get_observations_table_schema() -> list:
     return obs_table
 
 
+def map_media_to_gsheets_observations(media_row: dict) -> dict:
+    ''' grabs the media dict generated for an image and maps to gsheet obs dict'''
+
+    gsheets_obs_map = {
+        'observationID': '', # Assigning an observation ID should happen after observing
+        'deploymentID': media_row['deploymentID'],
+        'mediaID': media_row['mediaID'],
+        'filePath': media_row['filePath']
+    }
+
+    return gsheets_obs_map
+
 # def get_observation_input(media_table:dict=None) -> dict:
 
 #     observation_table = []

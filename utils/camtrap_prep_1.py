@@ -245,7 +245,7 @@ def prep_camtrap_dp(file_path_raw:str=None, data_input:dict=None):  # sd.SdXDevi
 
     # Generate gsheets observations.CSV
     generate_gsheets_observations_datasets(
-        media_table = media_data,
+        media_data = media_data,
         output_path = deploy_dir
        )
 

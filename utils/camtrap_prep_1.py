@@ -111,10 +111,10 @@ def generate_media_datasets(
         file_path:str=None, 
         input_data:dict=None,
         output_path:str=None,
-        ) -> list:
-    '''Get sdUploader + image inputs for media'''
+        ) -> DataFrame:
+    '''Get sdUploader + image inputs for media. Returns media_table dataframe'''
 
-    # TODO 
+    # TODO (done?)
     # - update this to use new folder-name-convention 
     # - switch media-file-ref to pull from AWS S3 (`utils_s3` functions)
     
@@ -158,6 +158,35 @@ def generate_media_datasets(
         print(f'media data validations:  {media_data_valid}')
 
     return media_data
+
+
+def generate_gsheets_observations_datasets(media_data: DataFrame, output_path: str):
+    ''' Uses the media table to map a gsheet observation csv '''
+    
+    image_obs_raw_data = []
+    video_obs_raw_data = []
+
+    for _, row in media_data.iterrows():
+        # Because media_data already extracts all necessary data, let's just map it up!
+        if 'image' in row['fileMediatype']:
+            image_obs_raw_data.append(uc.map_media_to_gsheets_observations(row))
+        elif 'video' in row['fileMediatype']:
+            video_obs_raw_data.append(uc.map_media_to_gsheets_observations(row))
+
+
+    # Save image observations for gsheets
+    img_obs_data_filename = f"{output_path}/gsheets_image_observations.csv"
+    image_observations_data = DataFrame(image_obs_raw_data)
+    image_observations_data.to_csv(img_obs_data_filename,
+                                index=False)
+
+    # Save video observations for gsheets
+    video_obs_data_filename = f"{output_path}/gsheets_video_observations.csv"
+    video_observations_data = DataFrame(video_obs_raw_data)
+    video_observations_data.to_csv(video_obs_data_filename,
+                                index=False)
+    
+    return
 
 
 # 3. SD Upload + rsync
@@ -213,6 +242,12 @@ def prep_camtrap_dp(file_path_raw:str=None, data_input:dict=None):  # sd.SdXDevi
         input_data = data_entry_info,
         output_path = deploy_dir,
         )
+
+    # Generate gsheets observations.CSV
+    generate_gsheets_observations_datasets(
+        media_data = media_data,
+        output_path = deploy_dir
+       )
 
     # # Generate observations.CSV
     # obs_data = generate_observations_datasets(

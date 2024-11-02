@@ -1,23 +1,40 @@
-cameraID,Serial Number,cameraModel,Camera Type,Manufacturer - Model
-UR_ROV,,OpenROV Trident,ROV Camera,
-UR_360,,Insta360 X3,360 Camera,
-UR_DR1,,DJI Mavic Pro,Drone ,DJI
-UR_DR2,,DJI Mavic 2 Pro,Drone ,DJI
-UR001,EN_17013910,BestGuarder SG-880V,Wildlife Camera,
-UR002,,Campark T200,Wildlife Camera,
-UR003,None - Looks like a Bumble Bee,Foxelli UR#001 (previous label),Wildlife Camera,
-UR004,,Spypoint LM2 ,Wildlife Camera,Spypoint - LM2
-UR005,4WKW-CI2-SGE5,Spypoint Link Micro SGE5,Wildlife Camera,Spypoint - LM
-UR006,SORJ-ZTO-LTMR,Spypoint (New Mini) LM2-LMTR,Wildlife Camera,Spypoint - LM2
-UR007,MYQM-7GH-Y2YW,Spypoint LM2-Y2YW,Wildlife Camera,Spypoint - LM2
-UR008,B121014873,Bushnell LPZ 247,Wildlife Camera,Bushnell
-UR009,B110505716,Bushnell LPZ 217,Wildlife Camera,Bushnell
-UR010,None,Bushnell LPZ 118,Wildlife Camera,Bushnell
-UR011,,Reveal_002_Wildmile,Wildlife Camera,Reveal
-UR012,,Reveal_001_Wildmile,Wildlife Camera,Reveal
-UR013,,Reveal_Bubbly,Wildlife Camera,Reveal
-UR014,SK2023070056006,Reveal_Prologis,Wildlife Camera,Reveal
-UR015,465YIWEV2YL,Spypoint LM2 - V2YL - CHONK,Wildlife Camera,Spypoint - LM2
-UR016,XOXF-F7U-GJQL,Spypoint LM2-GJQL,,Spypoint - LM2
-UR017,Q4GM-TGH-Y2YO,Spypoint LM2-Y2YO,Wildlife Camera,Spypoint - LM2
-UR018,HGS4VGHY2YV,Spypoint Link Micro S LTE-V,Wildlife Camera,Spypoint - Micro LTE
+cameraID,Serial Number,cameraModel,Camera Type,Battery Type,Accessories,Deployment Status,Storage Location Bin,SD Card Compatibility,Manufacturer,Operational?
+UR_ROV,,OpenROV Trident,ROV Camera,,,,,,,
+UR_360,,Insta360 X3,360 Camera,,,,,,,
+UR_DR1,,DJI Mavic Pro,Drone ,,,,,,DJI,
+UR_DR2,,DJI Mavic 2 Pro,Drone ,,,,,,DJI,
+UR001,EN_17013910,BestGuarder SG-880V,Wildlife Camera,,,,,,,Working
+UR002,,Campark T200,Wildlife Camera,,,,,,,RETIRED
+UR003,None - Looks like a Bumble Bee,Foxelli UR#001 (previous label),Wildlife Camera,,,,,,,Working
+UR004,,Spypoint LM2 ,Wildlife Camera,,,,,<= 32GB,Spypoint - LM2,Working
+UR005,4WKW-CI2-SGE5,Spypoint Link Micro SGE5,Wildlife Camera,,,,,<= 32GB,Spypoint - LM,Working
+UR006,SORJ-ZTO-LTMR,Spypoint (New Mini) LM2-LMTR,Wildlife Camera,,,,,<= 32GB,Spypoint - LM2,Working
+UR007,MYQM-7GH-Y2YW,Spypoint LM2-Y2YW,Wildlife Camera,,,,,<= 32GB,Spypoint - LM2,Working
+UR008,B121014873,Bushnell LPZ 247,Wildlife Camera,,,,,,Bushnell,Working
+UR009,B110505716,Bushnell LPZ 217,Wildlife Camera,,,,,,Bushnell,Needs Repairs
+UR010,None,Bushnell LPZ 118,Wildlife Camera,,,,,,Bushnell,Working
+UR011,,Reveal_002_Wildmile,Wildlife Camera,,,,,,Reveal,Working
+UR012,,Reveal_001_Wildmile,Wildlife Camera,,,,,,Reveal,Working
+UR013,,Reveal_Bubbly,Wildlife Camera,,,,,,Reveal,Working
+UR014,SK2023070056006,Reveal_Prologis,Wildlife Camera,,,,,,Reveal,Working
+UR015,465YIWEV2YL,Spypoint LM2 - V2YL - CHONK,Wildlife Camera,,,,,<= 32GB,Spypoint - LM2,Working
+UR016,XOXF-F7U-GJQL,Spypoint LM2-GJQL,,,,,,<= 32GB,Spypoint - LM2,Working
+UR017,Q4GM-TGH-Y2YO,Spypoint LM2-Y2YO,Wildlife Camera,,,,,,Spypoint - LM2,Working
+UR018,HGS4VGHY2YV,Spypoint Link Micro S LTE-V,Wildlife Camera,,,,,,Spypoint - Micro LTE,
+GP3-1,,Go Pro Hero 3,Go Pro,,,,BIN #02,,,Working
+GP3-2,,Go Pro Hero 3,Go Pro,,,,BIN #02,,,Working
+GP3-3,,Go Pro Hero 3,Go Pro,,,,BIN #02,,,Working
+GP4-1,,Go Pro Hero 4,Go Pro,,,,BIN #02,,,Working
+GP9-1,,Go Pro Hero 9,Go Pro,,,,BIN #02,,,
+UR019,XP2436P506251,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR020,XP2436P507156,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,BIN #01,32 GB,Tactacam - Reveal XB,Working
+UR021,XP2436P507219,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,BIN #01,32 GB,Tactacam - Reveal XB,Working
+UR022,XP2436P506194,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,BIN #01,32 GB,Tactacam - Reveal XB,Working
+UR023,XP2436P507230,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,BIN #01,32 GB,Tactacam - Reveal XB,Working
+UR024,XP2436P507248,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR025,XP2436P506624,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR026,XP2436P506599,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR027,XP2436P506205,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR028,XP2436P507009,Reveal Pro 3,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,Tactacam - Reveal XB,Working
+UR029,XB2023050029833,Reveal XB,Stationary Wildlife Camera,12 AA Battery Cartridge,Strap,In Office,,32 GB,,
+CSC001,D2433P3A28471,Cellular Security Camera,Security Camera ,12 AA Battery Cartridge,Mount,In Office,,,,

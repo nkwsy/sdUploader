@@ -12,6 +12,7 @@ import threading
 from multiprocessing import Process
 import os
 import utils.camtrap_prep_1 as ucp
+import utils.csv_tools as csv_tools
 
 
 def start_download(src, dst):
@@ -195,29 +196,20 @@ class SDCardUploaderGUI:
         self.cameraid = StringVar()
         ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
         ttk.Label(manual_frame, text="Recommended - See camera inventory: tinyurl.com/bdhmzhme").grid(column=2, row=3, sticky=W)
-        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(
-            'UR001', 'UR002', 'UR003', 'UR004', 'UR005',
-            'UR006', 'UR007', 'UR008', 'UR009', 'UR010',
-            'UR011', 'UR012', 'UR013', 'UR014', 'UR015',
-            'UR016', 'UR017', 'UR018', 'UR019', 'UR020',
-            'UR_ROV', 'UR_360', 'UR_DR1', 'UR_DR2'))
+        camera_table = csv_tools.rows('data/camera_inventory.csv')
+        camera_names = [row['cameraID'] for row in camera_table]
+        camera_names.sort()
+        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(camera_names))
         self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
         
         # Location
         self.location = StringVar()
         ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-        ttk.Label(manual_frame, text="Required. No spaces. Use drop-down or type. See map: tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
-        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(
-            'BC_Floating_A', 'BC_Floating_B', 
-            'GI_NBranchCanal_A',
-            'RP_EastBank_A', 'RP_SouthWest_B',
-            'SB_Prologis_A',
-            'TC_TurtCitay_DockA', 'TC_TurtCitay_WreckA',
-            'WM_Boardwalk_A', 'WM_Boardwalk_B', 'WM_Boardwalk_C', 'WM_Boardwalk_D', 'WM_Boardwalk_E', 'WM_Boardwalk_F', 'WM_Boardwalk_G',
-            'WM_Boardwalk_G1', 'WM_Boardwalk_G2', 'WM_Boardwalk_H1', 'WM_Boardwalk_H2', 
-            'WM_Boardwalk_I1', 'WM_Boardwalk_I2', 'WM_Boardwalk_J1', 'WM_Boardwalk_J2',
-            'WMDIS_A', 'WMDIS_B')
-            )
+        ttk.Label(manual_frame, text="Required. No spaces. Type or use drop-down. See tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
+        location_table = csv_tools.rows('data/camtrap_locations.csv')
+        location_names = [row['locationName'] for row in location_table]
+        location_names.sort()
+        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(location_names))
         self.nameEntry.grid(column=1, row=4, sticky=(W, E))
 
         # Date Entry

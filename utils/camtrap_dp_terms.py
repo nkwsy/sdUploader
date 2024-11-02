@@ -400,9 +400,11 @@ def map_to_camtrap_media(media_table:list=None,
                 # else:
                 # image_path = re.sub(f"{config['HOME_FOLDER']}/", "", image['File:Directory'])
                 path_base = config['S3_BASE_URL']
-                deploy_subdir = deploy_id # re.sub(fr".*{temp_folder}/", "", image['File:Directory'])
-                year_dir = deploy_subdir[0:4]  # TODO - check/validate that this = "YYYY"
-                image_path = f"{path_base}images/{year_dir}/{deploy_subdir}/{image['File:FileName']}"
+                # deploy_subdir = deploy_id # re.sub(fr".*{temp_folder}/", "", image['File:Directory'])
+                # year_dir = deploy_subdir[0:4]  # TODO - check/validate that this = "YYYY"
+                image_dir = re.sub(r"{config['HOME_FOLDER']}/Wildlife_Camera", 'images', image['File:FileDirectory'])
+                # image_path = f"{path_base}images/{year_dir}/{deploy_subdir}/{image['File:FileName']}"
+                image_path = f"{path_base}images/{image_dir}/image['File:FileName']"
 
                 media_map = {
                     "mediaID" : media_id,  # Required
@@ -451,6 +453,7 @@ def map_media_to_gsheets_observations(media_row: dict) -> dict:
     }
 
     return gsheets_obs_map
+
 
 # def get_observation_input(media_table:dict=None) -> dict:
 

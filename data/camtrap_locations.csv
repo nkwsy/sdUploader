@@ -1,26 +1,35 @@
-"locationID","locationName","latitude","longitude","coordinateUncertainty","Link to Google Map","Note"
-"34aff315","WM_Boardwalk_A",41.90685767,-87.65193403,6,"https://www.google.com/maps/@41.9068576746426,-87.6519340327969",
-47639190,"WM_Boardwalk_B",41.90666059,-87.65179212,9,"https://www.google.com/maps/@41.9066605853655,-87.6517921159429",
-"d12f6d73","WM_Boardwalk_C",41.90641651,-87.65167677,5,"https://www.google.com/maps/@41.9064165085314,-87.6516767745536",
-"0d08404e","WM_Boardwalk_D",41.90666448,-87.65191204,8,"https://www.google.com/maps/@41.9066644802584,-87.651912037179",
-"830bedca","WM_Boardwalk_E",41.90687305,-87.65205737,8,"https://www.google.com/maps/@41.9068730483806,-87.6520573668811",
-"4262b612","WM_Boardwalk_F",41.90702475,-87.6521213,5,"https://www.google.com/maps/@41.9070247525754,-87.6521212974942",
-"a4fa58de","WM_Boardwalk_G",41.90719924,-87.65225475,6,"https://www.google.com/maps/@41.9071992369334,-87.6522547517468",
-"1c481857","WM_Boardwalk_G1",,,,,
-"d2f9d25d","WM_Boardwalk_G2",,,,,
-"bad341b8","WM_Boardwalk_H1",,,,,
-"2feed5bc","WM_Boardwalk_H2",,,,,
-"9c1d4719","WM_Boardwalk_I1",,,,,
-"dfa84a27","WM_Boardwalk_I2",,,,,
-"c2869634","UR_Office",,,,,
-"15a67ce1","BC_Floating_A",,,,,
-"15e00fe9","BC_Floating_B",,,,,
-"70bd507b","SB_Prologis_A",,,,,
-"830cc01e","Retired",,,,,
-"1527ba4e","TC_TurtCitay_WreckA",,,,,"Formerly known as ""TC_Shipwreck_A"""
-"2302b1c2","TC_TurtCitay_DockA",,,,,"Formerly known as ""TC_PissCam_D"""
-"f076d094","WMDIS_A",41.90668,-87.65232,10,"https://www.google.com/maps/@41.90668,-87.65232",
-15281937,"WMDIS_B",41.90697,-87.65251,10,"https://www.google.com/maps/@41.90697,-87.65251",
-"24490c2d","RP_EastBank_A",41.97325,-87.70375,20,"https://www.google.com/maps/@41.97325,-87.70375",
-"a3098bbe","RP_SouthWest_B",41.972251,-87.704016,,"https://www.google.com/maps/@41.972251,-87.704016",
-"a4aa8cda","GI_NBranchCanal_A",41.903472,-87.649722,,"https://www.google.com/maps/@41.903472,-87.649722",
+locationID,locationName,latitude,longitude,coordinateUncertainty,Link to Google Map,Note,projectID
+34aff315,WM_Boardwalk_A,41.90685767,-87.65193403,6,"https://www.google.com/maps/@41.9068576746426,-87.6519340327969",,
+47639190,WM_Boardwalk_B,41.90666059,-87.65179212,9,"https://www.google.com/maps/@41.9066605853655,-87.6517921159429",,
+d12f6d73,WM_Boardwalk_C,41.90641651,-87.65167677,5,"https://www.google.com/maps/@41.9064165085314,-87.6516767745536",,
+0d08404e,WM_Boardwalk_D,41.90666448,-87.65191204,8,"https://www.google.com/maps/@41.9066644802584,-87.651912037179",,
+830bedca,WM_Boardwalk_E,41.90687305,-87.65205737,8,"https://www.google.com/maps/@41.9068730483806,-87.6520573668811",,
+4262b612,WM_Boardwalk_F,41.90702475,-87.6521213,5,"https://www.google.com/maps/@41.9070247525754,-87.6521212974942",,
+a4fa58de,WM_Boardwalk_G,41.90719924,-87.65225475,6,"https://www.google.com/maps/@41.9071992369334,-87.6522547517468",,
+1c481857,WM_Boardwalk_G1,,,,,,
+d2f9d25d,WM_Boardwalk_G2,,,,,,
+bad341b8,WM_Boardwalk_H1,,,,,,
+2feed5bc,WM_Boardwalk_H2,,,,,,
+9c1d4719,WM_Boardwalk_I1,,,,,,
+dfa84a27,WM_Boardwalk_I2,,,,,,
+da6fbc37,UR_Office,,,,,,
+15a67ce1,BC_Floating_A,,,,,,
+15e00fe9,BC_Floating_B,,,,,,
+70bd507b,SB_Prologis_A,,,,,,
+1527ba4e,TC_Shipwreck_A,,,,,"Currently in SDUploader as ""TC_TurtCitay_WreckA""",
+2302b1c2,TC_PissCam_D,,,,,"Currently in SDUploader as ""TC_TurtCitay_DockA""",
+f076d094,WMDIS_A,41.90668,-87.65232,10,"https://www.google.com/maps/@41.90668,-87.65232",,
+15281937,WMDIS_B,41.90697,-87.65251,10,"https://www.google.com/maps/@41.90697,-87.65251",,
+24490c2d,RP_EastBank_A,41.97325,-87.70375,20,"https://www.google.com/maps/@41.97325,-87.70375",,
+a3098bbe,RP_SouthWest_B,41.972251,-87.704016,,"https://www.google.com/maps/@41.972251,-87.704016",,
+a4aa8cda,GI_NBranchCanal_A,41.903472,-87.649722,,"https://www.google.com/maps/@41.903472,-87.649722",,
+8a36b100,WM_Wetland_01,41.9091398,-87.65382893,,"https://www.google.com/maps/place/41°54'33.1%22N+87°39'13.9%22W/@41.9091992,-87.6564367,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9091952!4d-87.6538618?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+eb17fbdd,WM_Wetland_02,41.90674298,-87.65176121,,"https://www.google.com/maps/place/41°54'23.0%22N+87°39'05.9%22W/@41.9063844,-87.6542088,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9063804!4d-87.6516339?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+995bce79,WM_Natural_01,41.90584194,-87.65168141,,"https://www.google.com/maps/place/41°54'22.9%22N+87°39'07.8%22W/@41.9063747,-87.6547535,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9063707!4d-87.6521786?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+f251a25e,WM_Natural_02,41.90445456,-87.65064071,,"https://www.google.com/maps/place/41°54'13.9%22N+87°39'00.1%22W/@41.9038751,-87.6526054,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9038711!4d-87.6500305?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+7a133950,BC_Wetland_01,41.92438782,-87.66482027,,"https://www.google.com/maps/place/41°50'32.4%22N+87°39'53.4%22W/@41.842321,-87.6660487,190m/data=!3m2!1e3!4b1!4m10!1m5!3m4!2zNDHCsDUwJzMyLjUiTiA4N8KwMzknNTIuOCJX!8m2!3d41.8423674!4d-87.6646727!3m3!8m2!3d41.84232!4d-87.664831?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+9eb0d3bc,BC_Wetland_02,41.84150215,-87.66513407,,"https://www.google.com/maps/place/41°50'29.4%22N+87°39'54.5%22W/@41.8415061,-87.667709,762m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.8415021!4d-87.6651341?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+bf4304f7,BC_Natural_01,41.84145339,-87.66529467,,"https://www.google.com/maps/place/41°50'29.4%22N+87°39'55.5%22W/@41.8415047,-87.6679815,762m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.8415007!4d-87.6654066?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+8dd7e5d2,BC_Natural_02,41.84124172,-87.66515261,,"https://www.google.com/maps/place/41°50'28.1%22N+87°39'54.4%22W/@41.8411527,-87.6676752,762m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.8411487!4d-87.6651003?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+5f402178,FL_Natural_01,41.92438201,-87.67381683,,"https://www.google.com/maps/place/41°55'28.6%22N+87°40'26.4%22W/@41.9246023,-87.6765852,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9245983!4d-87.6740103?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV
+89a2fef9,FL_Natural_02,41.92377848,-87.67295106,,"https://www.google.com/maps/place/41°55'24.4%22N+87°40'21.3%22W/@41.9234597,-87.6751448,761m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d41.9234557!4d-87.6725699?entry=ttu&g_ep=EgoyMDI0MTAyMS4xIKXMDSoASAFQAw%3D%3D",,24_BEAV

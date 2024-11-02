@@ -113,10 +113,6 @@ def generate_media_datasets(
         output_path:str=None,
         ) -> DataFrame:
     '''Get sdUploader + image inputs for media. Returns media_table dataframe'''
-
-    # TODO (done?)
-    # - update this to use new folder-name-convention 
-    # - switch media-file-ref to pull from AWS S3 (`utils_s3` functions)
     
     media_data = None
     image_batch = os.listdir(file_path)
@@ -188,7 +184,7 @@ def generate_gsheets_observations_datasets(media_data: DataFrame, output_path: s
     
     return
 
-
+  
 # 3. SD Upload + rsync
     # Those tables get uploaded to AWS with image files
 
@@ -242,6 +238,7 @@ def prep_camtrap_dp(file_path_raw:str=None, data_input:dict=None):  # sd.SdXDevi
         input_data = data_entry_info,
         output_path = deploy_dir,
         )
+
 
     # Generate gsheets observations.CSV
     generate_gsheets_observations_datasets(

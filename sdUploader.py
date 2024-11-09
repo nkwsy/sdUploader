@@ -159,8 +159,9 @@ def copy_directory_contents(src_dir, dst_dir):
         
         # Check if item is a directory
         if os.path.isdir(src_item):
-            print(f'copying DIR: {item}')
-            shutil.copytree(src_item, dst_item)
+            if f'{item}' != ".Trashes":
+                print(f'copying DIR: {item}')
+                shutil.copytree(src_item, dst_item)
         else:
             print(f'copying FILE: {item}')
             shutil.copy2(src_item, dst_item)

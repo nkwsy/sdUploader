@@ -4,6 +4,7 @@ from datetime import datetime
 from dotenv import dotenv_values
 from exiftool import ExifToolHelper
 from pandas import DataFrame
+import hashlib
 import pandas as pd
 import utils.csv_tools as csv_tools
 import json, os, re, requests, time, uuid, zipfile
@@ -386,10 +387,15 @@ def map_to_camtrap_media(media_table:list=None,
             if input_data['cameraid'] is None or len(input_data['cameraid']) < 1:
                 deploy_id = f"{input_data['date']}_{input_data['location']}"
 
-            media_id = re.sub(r'\..+$', '', image['File:FileName'])
+            # media_id = re.sub(r'\..+$', '', image['File:FileName'])
+            # filename = input("Enter the file name: ")
+            with open(image['SourceFile'],"rb") as f:
+                bytes = f.read() # read file as bytes
+                media_id = hashlib.md5(bytes).hexdigest()
+            time.sleep(0.25)
 
             # Skip file if it isn't a valid image file with full EXIF metadata
-            if len(re.findall('thumbs.db', media_file_path.lower())) > 0 or 'File:MIMEType' not in image.keys():
+            if len(re.findall(r'thumbs\.db|\.Trash', media_file_path.lower())) > 0 or 'File:MIMEType' not in image.keys():
                 print(f'Skipping {media_file_path}  -- MIMEType missing, not image/video/audio, or file corrupted?')
                 pass
 
@@ -402,9 +408,9 @@ def map_to_camtrap_media(media_table:list=None,
                 path_base = config['S3_BASE_URL']
                 # deploy_subdir = deploy_id # re.sub(fr".*{temp_folder}/", "", image['File:Directory'])
                 # year_dir = deploy_subdir[0:4]  # TODO - check/validate that this = "YYYY"
-                image_dir = re.sub(r"{config['HOME_FOLDER']}/Wildlife_Camera", 'images', image['File:FileDirectory'])
+                image_dir = re.sub(f"{config['HOME_FOLDER']}/", "", image['File:Directory'])
                 # image_path = f"{path_base}images/{year_dir}/{deploy_subdir}/{image['File:FileName']}"
-                image_path = f"{path_base}images/{image_dir}/image['File:FileName']"
+                image_path = f"{path_base}images/{image_dir}/{image['File:FileName']}"
 
                 media_map = {
                     "mediaID" : media_id,  # Required

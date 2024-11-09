@@ -306,10 +306,10 @@ class SDCardUploaderGUI:
                 self.progress_text.set("100%")
                 # self.locked = False
                 self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
+                self.create_camtrap_tables(self.data_entry_info)
                 messagebox.showinfo("Upload Complete", "Upload Complete")
                 self.wipeSDWindow(self.drive.mountpoint)
                 # self.download_complete()
-                self.create_camtrap_tables(self.data_entry_info)
             else:
                 logger.warning("Upload failed!")
                 self.progress_text.set("Upload failed!")
@@ -336,6 +336,9 @@ class SDCardUploaderGUI:
         deploy_type = self.data_entry_info['camera']
         deploy_year = f"{self.data_entry_info['date']}"[0:4]
         deploy_home_folder = f"{os.getenv('HOME_FOLDER')}/{deploy_type}/{deploy_year}/{deploy_id}"
+        while not os.path.exists(deploy_home_folder):
+            time.sleep(2)
+            print(f'Waiting for deploy directory {deploy_home_folder}')
         ucp.prep_camtrap_dp(file_path_raw=deploy_home_folder, data_input=data_entry_info)
        
     def browse_button(self):

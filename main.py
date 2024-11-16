@@ -305,7 +305,7 @@ class SDCardUploaderGUI:
         
         # Update the progress text
         # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
-        logger.info(f"Progress: {int(progress_value['progress_percent'] * 100)}%")
+        # logger.info(f"Progress: {int(progress_value['progress_percent'] * 100)}%")
 
         # Check if the download thread is alive, if yes, continue updating
         if self.download_thread.is_alive():

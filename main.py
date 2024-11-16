@@ -127,6 +127,7 @@ class SDCardUploaderGUI:
             ttk.Label(drive_frame, text=f"Mount Point: {drive.mountpoint}").grid(row=0, column=0, sticky=tk.W, pady=2)
             ttk.Label(drive_frame, text=f"Size: {drive.size} GB").grid(row=1, column=0, sticky=tk.W, pady=2)
             ttk.Label(drive_frame, text=f"Used: {drive.used} GB").grid(row=2, column=0, sticky=tk.W, pady=2)
+
             ttk.Label(drive_frame, text=f" {drive.percent} %").grid(row=2, column=0, sticky=tk.E, pady=2)
             # if extended_attributes == True:
             if extended_attributes:
@@ -244,8 +245,9 @@ class SDCardUploaderGUI:
         """Displays a confirmation box with a progress bar and estimated upload time."""
 
         # Calculate estimated upload time
-        # Converting GB to MB for the drive size and then estimating the time at 25MB/s
-        estimated_time_seconds = (drive.size * 1024) / 25
+        # Convert GB to MB, then divide by transfer rate
+        TRANSFER_RATE_MB_PER_SEC = 25  # More conservative estimate
+        estimated_time_seconds = (drive.used * 1024) / TRANSFER_RATE_MB_PER_SEC
         estimated_time = int(timedelta(seconds=estimated_time_seconds) / timedelta(minutes=1))
 
         # Create a container frame

@@ -521,17 +521,29 @@ def get_image_info(img_path):
 
 def get_all_image_info(mount_point):
     files = get_files_in_sd_card(mount_point)
+    # Sample up to 50 random files, or all files if less than 50
+    import random
+    sample_size = min(50, len(files))
+    sampled_files = random.sample(files, sample_size)
+    
     all_images = []
     non_images = []
-    for x in files:
+    for x in sampled_files:
         f_info = get_image_info(x)
         if f_info is not None:
             all_images.append(f_info)
         else:
             non_images.append(x)
+    
     cameras_used = set([x['camera_type'] for x in all_images])
-    image_count = len(all_images)
-    return {'images': all_images, 'non_images':non_images, 'cameras_used':cameras_used, 'image_count':image_count }
+    # Return total count of all files, not just sampled ones
+    image_count = len(files)
+    return {
+        'images': all_images, 
+        'non_images': non_images, 
+        'cameras_used': cameras_used, 
+        'image_count': image_count
+    }
 
 
 #!/usr/bin/env python3

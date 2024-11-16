@@ -20,8 +20,15 @@ import re
 import psutil
 from exiftool import ExifToolHelper
 
-logger.add(sys.stderr, level="INFO")
-logger.add("sdUploader.log", rotation="5 MB")
+logger.remove()  # Remove default handler
+logger.add(sys.stderr, 
+          format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+          level="INFO")
+logger.add("sdUploader.log", 
+          format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+          rotation="5 MB",
+          retention="1 week",
+          level="DEBUG")
 load_dotenv()
 
 # Set default values
@@ -148,23 +155,31 @@ def create_temp_folder():
     return output_folder
 
 def copy_directory_contents(src_dir, dst_dir):
-    # Ensure destination directory exists
+    logger.debug(f"Starting copy from {src_dir} to {dst_dir}")
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
-    logger.info(f'Copying files from {src_dir} to {dst_dir}')
+        logger.debug(f"Created destination directory: {dst_dir}")
+    
+    total_size = get_directory_size(src_dir)
+    logger.info(f"Total size to copy: {total_size / (1024*1024):.2f} MB")
+    
     for item in os.listdir(src_dir):
-        print(item)
         src_item = os.path.join(src_dir, item)
         dst_item = os.path.join(dst_dir, item)
         
-        # Check if item is a directory
-        if os.path.isdir(src_item):
-            if f'{item}' != ".Trashes":
-                print(f'copying DIR: {item}')
-                shutil.copytree(src_item, dst_item)
-        else:
-            print(f'copying FILE: {item}')
-            shutil.copy2(src_item, dst_item)
+        try:
+            if os.path.isdir(src_item):
+                if item != ".Trashes":
+                    logger.debug(f"Copying directory: {item}")
+                    shutil.copytree(src_item, dst_item)
+                else:
+                    logger.debug(f"Skipping .Trashes directory")
+            else:
+                logger.debug(f"Copying file: {item}")
+                shutil.copy2(src_item, dst_item)
+        except Exception as e:
+            logger.error(f"Error copying {src_item}: {str(e)}")
+            raise
 
 def start_copy(src_dir):
     # Create temporary folder
@@ -201,61 +216,48 @@ def get_directory_size(directory):
 # pass camera, dateEntry/date, location, file_list, info, cameraid
 # 
 def simple_upload_files(src_dir, camera_info):
-    camera = camera_info.get('camera', 'to_be_sorted')
-    date = camera_info.get('date', datetime.now().strftime('%Y-%m-%d'))
-    location = camera_info.get('location', '')
-    notes = camera_info.get('notes', '')
-    cameraid = camera_info.get('cameraid', '')
-    file_list = camera_info.get('file_list', None)
-    info = camera_info.get('info', '')
-    #file_extension = 'jpg' # Default file extension - example: '.ORF', '.jpg' or '.CR2'
-    base_folder = os.path.join(home_folder, camera)
-    logger.info(f'camera_info: {camera_info}. base_folder: {base_folder}')
-
-    # If cameraId is missing, use location in folder name instead
-    folder_suffix = cameraid
-    if folder_suffix is None or folder_suffix == '': 
-        folder_suffix = location
-
-    folder_name = f"{date.strftime('%Y-%m-%d')}_{folder_suffix}"
-    today = datetime.now()
-    year_folder = f"{date.year}"
-    # folder_name = today.strftime('%Y-%m-%d') + ' ' + ' '.join(args)
-    folder_name = folder_name.strip()
-    output_folder = os.path.join(base_folder, year_folder, folder_name)
-    #Create output folder
+    logger.debug(f"Starting upload with info: {camera_info}")
     try:
-        os.makedirs(output_folder)
-        logger.info(f'created output folder {output_folder}')
-    except FileExistsError as exists:
-        print('Folder exists:', exists.filename)
-        print('Using existing folder...')
-
-    #Copy files
-
-    #Progress bar
-
-    logger.info(f'Copying files to {output_folder}')
-    copy_directory_contents(src_dir, output_folder)
-    textFile = output_folder + '/info.txt'
-    jsonFile = output_folder + '/camera_info.json'
-    file_list = get_files_in_folder(src_dir)
-    info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n\nFile_list\n{file_list}"
-
-    print(info)
-    
-    with open(textFile, 'w') as f:
-        f.write(info)
-    
-    with open(jsonFile, 'w') as f:
-        f.write(json.dumps(camera_info, indent = 2, default=str))
-
-    logger.info('Finished uploading files!')
-
-    with open(src_dir + '/uploaded.txt', 'w') as f:
-        f.write(f'{output_folder}\n')
-
-    pass
+        camera = camera_info.get('camera', 'to_be_sorted')
+        date = camera_info.get('date', datetime.now().strftime('%Y-%m-%d'))
+        location = camera_info.get('location', '')
+        notes = camera_info.get('notes', '')
+        cameraid = camera_info.get('cameraid', '')
+        
+        base_folder = os.path.join(home_folder, camera)
+        logger.info(f"Base folder: {base_folder}")
+        
+        folder_suffix = cameraid if cameraid else location
+        folder_name = f"{date.strftime('%Y-%m-%d')}_{folder_suffix}"
+        year_folder = f"{date.year}"
+        output_folder = os.path.join(base_folder, year_folder, folder_name)
+        
+        logger.debug(f"Creating output folder: {output_folder}")
+        os.makedirs(output_folder, exist_ok=True)
+        
+        logger.info(f"Starting file copy to {output_folder}")
+        copy_directory_contents(src_dir, output_folder)
+        
+        # Write metadata files
+        file_list = get_files_in_folder(src_dir)
+        info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n\nFile_list\n{file_list}"
+        
+        logger.debug("Writing metadata files")
+        with open(f"{output_folder}/info.txt", 'w') as f:
+            f.write(info)
+        
+        with open(f"{output_folder}/camera_info.json", 'w') as f:
+            f.write(json.dumps(camera_info, indent=2, default=str))
+            
+        with open(f"{src_dir}/uploaded.txt", 'w') as f:
+            f.write(f'{output_folder}\n')
+            
+        logger.info("Upload completed successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Upload failed: {str(e)}", exc_info=True)
+        return False
 
 
 def uploadFiles(camera=None, date=None, location='', notes='', file_list=None, cameraid=''):
@@ -509,15 +511,30 @@ def get_only_tag(data, keyword):
     return None
 
 def get_image_info(img_path):
-    exif_data = get_metadata(img_path)
-    print(exif_data)
-    if exif_data is None:
+    logger.debug(f"Getting image info for: {img_path}")
+    try:
+        exif_data = get_metadata(img_path)
+        if exif_data is None:
+            logger.warning(f"No EXIF data found for {img_path}")
+            return None
+            
+        make = get_only_tag(exif_data, 'Make')
+        date = get_only_tag(exif_data, 'DateTimeOriginal')
+        mediatype = get_only_tag(exif_data, 'MIMEType')
+        camera_type = get_camera_type(exif_data)
+        
+        logger.debug(f"Image info: make={make}, date={date}, type={camera_type}, media={mediatype}")
+        return {
+            'date': parse_date(date),
+            'make': make,
+            'file': img_path,
+            'camera_type': camera_type,
+            'mediatype': mediatype,
+            'SourceFile': img_path
+        }
+    except Exception as e:
+        logger.error(f"Error getting image info for {img_path}: {str(e)}", exc_info=True)
         return None
-    make = get_only_tag(exif_data, 'Make')
-    date = get_only_tag(exif_data, 'DateTimeOriginal')
-    mediatype = get_only_tag(exif_data, 'MIMEType')
-    camera_type = get_camera_type(exif_data)
-    return {'date': parse_date(date), 'make': make, 'file': img_path, 'camera_type': camera_type, 'mediatype': mediatype, 'SourceFile': img_path}
 
 def get_all_image_info(mount_point):
     files = get_files_in_sd_card(mount_point)

@@ -13,28 +13,27 @@ from multiprocessing import Process
 import os
 import utils.camtrap_prep_1 as ucp
 import utils.csv_tools as csv_tools
+import sys
 
 
 def start_download(src, dst):
     """Starts the download process in a separate thread."""
+    logger.info(f"Starting download thread from {src} to {dst}")
     thread = threading.Thread(target=sd.copy_directory_contents, args=(src, dst))
     thread.start()
     return thread
 
 def start_upload(folder, info):
     """Starts the upload process in a separate thread."""
+    logger.info(f"Starting upload thread from {folder} with info: {info}")
     thread = threading.Thread(target=sd.simple_upload_files, args=(folder, info))
     thread.start()
     return thread
-    # dirEntry.grid(column=1, row=6, sticky=(W, E))
-
-
-    # root.filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-    # notes
 
 class SDCardUploaderGUI:
 
     def __init__(self, master):
+        logger.info("Initializing SD Card Uploader GUI")
         self.master = master
         self.master.title("SD card uploader")
 
@@ -102,20 +101,22 @@ class SDCardUploaderGUI:
         # sd_entry.current(0)
 
     def update_sd_cards(self):
-        sd_cards = sd.check_sd()
-        if sd_cards is None:
-            messagebox.showinfo("No SD cards", "Please insert an SD card")
-        mounted_drive = [card.device for card in sd_cards]
-        if self.mounted_drives != mounted_drive:
-            self.mounted_drives = [card.device for card in sd_cards]
-            # Clear all the existing widgets in tab1
-            for widget in self.tab1.winfo_children():
-                widget.destroy()
-            self.create_drive_boxes(self.tab1, sd_cards)
-            print(f'Updated SD cards: {self.mounted_drives}')
-            # create_drive_boxes(self.tab1, sd_cards)
-            # return self.update_sd_cards(extended_attributes=True)
-        # Call the update_sd_cards function after a certain interval (e.g., every 10 seconds)
+        try:
+            sd_cards = sd.check_sd()
+            if sd_cards is None:
+                logger.debug("No SD cards detected")
+                messagebox.showinfo("No SD cards", "Please insert an SD card")
+            mounted_drive = [card.device for card in sd_cards]
+            if self.mounted_drives != mounted_drive:
+                logger.info(f"SD card change detected. Old: {self.mounted_drives}, New: {mounted_drive}")
+                self.mounted_drives = [card.device for card in sd_cards]
+                for widget in self.tab1.winfo_children():
+                    widget.destroy()
+                self.create_drive_boxes(self.tab1, sd_cards)
+                logger.debug(f'Updated SD cards: {self.mounted_drives}')
+        except Exception as e:
+            logger.error(f"Error updating SD cards: {str(e)}", exc_info=True)
+        
         self.master.after(10000, self.update_sd_cards)
 
     def create_drive_boxes(self, master, sd_cards, extended_attributes=True):
@@ -277,14 +278,22 @@ class SDCardUploaderGUI:
 
     def start_card_download(self, estimated_time_seconds):
         """Simulates the upload process by updating the progress bar."""
-        self.confirm_btn.config(state=tk.DISABLED)
-        self.temp_folder = sd.create_temp_folder()
-        logger.info(f"Gui Starting upload from {self.drive.device} to {self.temp_folder}")
-        self.locked = True
-        self.download_thread = start_download(self.drive.mountpoint, self.temp_folder)
-        
-        # Start updating the progress in the GUI periodically (e.g., every 1 second)
-        self.update_progress()
+        try:
+            logger.info(f"Starting card download from {self.drive.device}")
+            self.confirm_btn.config(state=tk.DISABLED)
+            self.temp_folder = sd.create_temp_folder()
+            logger.info(f"Created temp folder: {self.temp_folder}")
+            
+            self.locked = True
+            self.download_thread = start_download(self.drive.mountpoint, self.temp_folder)
+            logger.debug("Started download thread")
+            
+            self.update_progress()
+        except Exception as e:
+            logger.error(f"Error starting card download: {str(e)}", exc_info=True)
+            self.locked = False
+            self.confirm_btn.config(state=tk.NORMAL)
+            messagebox.showerror("Error", f"Failed to start download: {str(e)}")
 
     def update_progress(self):
         """Updates the progress bar and text."""
@@ -349,22 +358,24 @@ class SDCardUploaderGUI:
         dir.set(filename)
 
     def wipeSDWindow(self, mydir):
-        # ... [The rest of the method remains unchanged]
-        if self.autodelete.get() == 1:
-            result = True
-        else:
-            result = messagebox.askyesno(
-                message='Would you like to Wipe the SD card?',
-                icon='question', title='Wipe SD Card', detail='Verify all files are copied correctly. If this is true please wipe card for next user')
-        if result:
-            try:
+        try:
+            if self.autodelete.get() == 1:
+                result = True
+            else:
+                result = messagebox.askyesno(
+                    message='Would you like to Wipe the SD card?',
+                    icon='question', title='Wipe SD Card', 
+                    detail='Verify all files are copied correctly. If this is true please wipe card for next user')
+            
+            if result:
+                logger.info(f"Starting SD card wipe for {mydir}")
                 messagebox.showinfo("Wiping SD card", "Please wait")
-                print(mydir)
                 sd.delete_contents_of_dir(mydir)
+                logger.info("SD card wipe completed successfully")
                 messagebox.showinfo("Wiping SD card", "Wipe complete, you can eject the SD card now")
-            except OSError as e:
-                logger.error("Error: %s - %s." % (e.filename, e.strerror))
-            pass
+        except OSError as e:
+            logger.error(f"Error wiping SD card: {str(e)}", exc_info=True)
+            messagebox.showerror("Error", f"Failed to wipe SD card: {str(e)}")
     
     def check_if_working(self):
         if self.locked == True:
@@ -393,15 +404,17 @@ class SDCardUploaderGUI:
                 tree.insert(parent_node, "end", text=item)
 
 def on_closing(app_instance):
-    logger.info(f"Closing GUI: app_instance.locked = {app_instance.locked}")
+    logger.info(f"Application closing initiated. Locked status: {app_instance.locked}")
     root.withdraw()
-    if app_instance.locked == True:
+    if app_instance.locked:
+        logger.info("Waiting for operations to complete before closing")
         app_instance.check_if_working()
-        logger.warning("on_closing checked app")
-        while app_instance.locked == True:
-            logger.warning("Waiting for upload to finish")
+        while app_instance.locked:
+            logger.warning("Still waiting for upload to finish")
             time.sleep(10)
+        logger.info("Operations completed, proceeding with shutdown")
         time.sleep(3)
+    logger.info("Application shutdown complete")
     root.quit()
         
 def start_gui():

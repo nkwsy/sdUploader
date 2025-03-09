@@ -134,9 +134,14 @@ def delete_contents_of_dir(directory_path):
 
 def get_files_in_folder(dir):
     file_extension = (".ORF", ".jpg", ".JPG", ".mp4", ".MP4","MOV","mov") # Set extension of both
-    sd_files = os.listdir(dir)
-    #Filter for raw extension
-    selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
+    
+    # sd_files = os.listdir(dir)
+    sd_files = os.walk(dir)
+    
+    # Filter for raw extension
+    # # selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
+    # adjusted following https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#comment128971338_3207973
+    selected_files = [os.path.join(dir, k) for (dir, dirnames, filenames) in sd_files for k in filenames if k.endswith(file_extension)]
     return selected_files
 
 def create_temp_folder():
@@ -223,6 +228,7 @@ def simple_upload_files(src_dir, camera_info):
         location = camera_info.get('location', '')
         notes = camera_info.get('notes', '')
         cameraid = camera_info.get('cameraid', '')
+        photographer = camera_info.get('photographer', '')
         
         base_folder = os.path.join(home_folder, camera)
         logger.info(f"Base folder: {base_folder}")
@@ -240,7 +246,7 @@ def simple_upload_files(src_dir, camera_info):
         
         # Write metadata files
         file_list = get_files_in_folder(src_dir)
-        info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n\nFile_list\n{file_list}"
+        info = f"{location}\n{camera}\n{date.strftime('%Y-%m-%d')}\n{notes}\n{cameraid}\n{photographer}\n\nFile_list\n{file_list}"
         
         logger.debug("Writing metadata files")
         with open(f"{output_folder}/info.txt", 'w') as f:

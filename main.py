@@ -317,7 +317,7 @@ class SDCardUploaderGUI:
                 self.progress_text.set("100%")
                 # self.locked = False
                 self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
-                self.create_camtrap_tables(self.data_entry_info)
+                # self.create_camtrap_tables(self.data_entry_info)
                 messagebox.showinfo("Upload Complete", "Upload Complete")
                 self.wipeSDWindow(self.drive.mountpoint)
                 # self.download_complete()

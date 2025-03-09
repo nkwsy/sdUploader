@@ -142,7 +142,8 @@ def get_files_in_folder(dir):
     # # selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
     # adjusted following https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#comment128971338_3207973
     selected_files = [os.path.join(dir, k) for (dir, dirnames, filenames) in sd_files for k in filenames if k.endswith(file_extension)]
-    return selected_files
+    selected_files_out = ('\n').join(selected_files)
+    return selected_files_out
 
 def create_temp_folder():
     today = datetime.now()

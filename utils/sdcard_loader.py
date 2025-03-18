@@ -3,16 +3,12 @@ import psutil
 from pathlib import Path
 import os
 import re
+from utils.sdcard import SDCardAnalyzer
 
-
-class SDCardInfo:
-    def __init__(self, device, mountpoint):
-        self.device = device
-        self.mountpoint = mountpoint
 
 class DCIMSDCardLoader:
-    def __init__(self):
-        pass
+    def __init__(self, analyzer):
+        self.analyzer = analyzer
     def find_sd_cards(self):
         sd_cards = []
         for disk in psutil.disk_partitions():
@@ -21,13 +17,15 @@ class DCIMSDCardLoader:
             dcim_path = mountpoint_path / 'DCIM'
             if dcim_path.exists():
                 logging.debug(f"Found DCIM Card: {disk.device}")
-                sd_cards.append(SDCardInfo(disk.device, mountpoint_path))
+                sd_card = self.analyzer.analyze_sd_card(disk.device, mountpoint_path)
+                sd_cards.append(sd_card)
         return sd_cards
 
 
 class DevNameSDCardLoader:
-    def __init__(self):
-        pass
+    def __init__(self, analyzer):
+        self.analyzer = analyzer
+
     def is_devname_match(self, device_string):
         '''Check if a mounted storage device is an SD card'''
         sd_card_device_string = os.getenv("SD_CARD_MATCH_STRING")
@@ -43,13 +41,14 @@ class DevNameSDCardLoader:
             logging.debug(f"Checking {disk.device}")
             if self.is_devname_match(disk.device):
                 logging.debug(f"Found SD Card by device name: {disk.device}")
-                sd_cards.append(SDCardInfo(disk.device, Path(disk.mountpoint)))
+                sd_card = self.analyzer.analyze_sd_card(disk.device, Path(disk.mountpoint))
+                sd_cards.append(sd_card)
         return sd_cards
 
 
 class ComboLoader:
     def __init__(self):
-        self.sd_card_loaders = [DCIMSDCardLoader(), DevNameSDCardLoader()]
+        self.sd_card_loaders = [DCIMSDCardLoader(SDCardAnalyzer()), DevNameSDCardLoader(SDCardAnalyzer())]
 
     def find_sd_cards(self):
         '''Returns a list of SDCardInfo objects'''
@@ -64,8 +63,8 @@ class ComboLoader:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    dcim_cards = DCIMSDCardLoader().find_sd_cards()
-    dev_cards = DevNameSDCardLoader().find_sd_cards()
+    dcim_cards = DCIMSDCardLoader(SDCardAnalyzer()).find_sd_cards()
+    dev_cards = DevNameSDCardLoader(SDCardAnalyzer()).find_sd_cards()
     combo_cards = ComboLoader().find_sd_cards()
 
     if not dcim_cards:
@@ -85,3 +84,4 @@ if __name__ == "__main__":
     else:
         for combo_card in combo_cards:
             print(f"Device: {combo_card.device}, Path: {combo_card.mountpoint}")
+    print(combo_cards)

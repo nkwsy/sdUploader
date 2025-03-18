@@ -1,9 +1,10 @@
 Babel==2.12.1
 loguru==0.7.0
-Pillow==10.0.0
+Pillow==10.4.0
 psutil==5.9.5
 python-dotenv==1.0.0
 tkcalendar==1.6.1
 PyExifTool==0.5.5
 frictionless>=5.14.5
 pandas>=2.2.0
+jsonpickle==4.0.2

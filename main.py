@@ -3,6 +3,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter import filedialog as fd
 import tkcalendar
+from dotenv import load_dotenv
+
+import logging
+
 import sdUploader as sd
 from loguru import logger
 from datetime import datetime
@@ -14,6 +18,12 @@ import os
 import utils.camtrap_prep_1 as ucp
 import utils.csv_tools as csv_tools
 import sys
+from utils.copy_tools import create_temp_folder, CopyThread
+from pathlib import Path
+
+from utils.sdcard_loader import ComboLoader
+
+from upload_manager import UploadManager
 
 
 def start_download(src, dst):
@@ -36,6 +46,7 @@ class SDCardUploaderGUI:
         logger.info("Initializing SD Card Uploader GUI")
         self.master = master
         self.master.title("SD card uploader")
+        self.upload_manager = None
 
         # figure out if busy before shutdown
         self.locked = False
@@ -60,11 +71,25 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
 
+        upload_manager_button = ttk.Button(self.master,
+                                                text="Open Upload Manager",
+                                                command=self.open_upload_manager)
+        upload_manager_button.grid(row=2, column=0, rowspan=1, padx=10, sticky=tk.E + tk.W + tk.N + tk.S)
+        #upload_manager_button.config(width=10, height=5)
+
         self.download_thread = None
         self.download_thread = None
 
         # self.create_manual_upload_frame()
 
+    def open_upload_manager(self):
+        logger.info("Opening upload manager")
+        if not self.upload_manager:
+            self.upload_manager = UploadManager(self)
+
+    def remove_upload_manager(self):
+        logger.info("Removing upload manager")
+        self.upload_manager = None
 
     def printProgressBar(self, value, max):
         phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
@@ -102,7 +127,7 @@ class SDCardUploaderGUI:
 
     def update_sd_cards(self):
         try:
-            sd_cards = sd.check_sd()
+            sd_cards = ComboLoader().find_sd_cards()
             if sd_cards is None:
                 logger.debug("No SD cards detected")
                 messagebox.showinfo("No SD cards", "Please insert an SD card")
@@ -125,11 +150,11 @@ class SDCardUploaderGUI:
             drive_frame.grid(row=index, column=0, pady=10, padx=10, sticky=tk.W+tk.E)
 
             # Displaying drive info
-            ttk.Label(drive_frame, text=f"Mount Point: {drive.mountpoint}").grid(row=0, column=0, sticky=tk.W, pady=2)
-            ttk.Label(drive_frame, text=f"Size: {drive.size} GB").grid(row=1, column=0, sticky=tk.W, pady=2)
-            ttk.Label(drive_frame, text=f"Used: {drive.used} GB").grid(row=2, column=0, sticky=tk.W, pady=2)
+            ttk.Label(drive_frame, text=f"Mount Point: {drive.mountpoint}").grid(row=0, column=0, sticky=tk.W, pady=4)
+            ttk.Label(drive_frame, text=f"Size: {drive.get_device_total_space_gb()} GB").grid(row=1, column=0, sticky=tk.W, pady=4)
+            ttk.Label(drive_frame, text=f"Used: {drive.get_device_used_space_gb()} GB").grid(row=2, column=0, sticky=tk.W, pady=4)
 
-            ttk.Label(drive_frame, text=f" {drive.percent} %").grid(row=2, column=0, sticky=tk.E, pady=2)
+            ttk.Label(drive_frame, text=f" {drive.device_percent_free} %").grid(row=2, column=0, sticky=tk.E, pady=2)
             # if extended_attributes == True:
             if extended_attributes:
                 # Start thread to get file info and then update the GUI
@@ -156,10 +181,10 @@ class SDCardUploaderGUI:
     
     def update_gui_with_drive_info(self, drive, drive_frame):
         # Update the labels in the GUI with the new info from the drive
-        ttk.Label(drive_frame, text=f"Filecount: {drive.image_count}").grid(row=1, column=0, sticky=tk.E, pady=2)
-        ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=2)
-        ttk.Label(drive_frame, text=f"Newest file: {drive.newest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
-        ttk.Label(drive_frame, text=f"Oldest file: {drive.oldest_file.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
+        ttk.Label(drive_frame, text=f"File Count: {drive.file_count}").grid(row=1, column=0, sticky=tk.E, pady=4)
+        ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=4)
+        ttk.Label(drive_frame, text=f"Newest file: {drive.modification_date_range.latest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
+        ttk.Label(drive_frame, text=f"Oldest file: {drive.modification_date_range.earliest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
             
     def select_drive(self, drive):
         """Handle the drive selection and display the upload confirmation."""
@@ -247,9 +272,10 @@ class SDCardUploaderGUI:
 
         # Calculate estimated upload time
         # Convert GB to MB, then divide by transfer rate
-        TRANSFER_RATE_MB_PER_SEC = 25  # More conservative estimate
-        estimated_time_seconds = (drive.used * 1024) / TRANSFER_RATE_MB_PER_SEC
-        estimated_time = int(timedelta(seconds=estimated_time_seconds) / timedelta(minutes=1))
+        #TRANSFER_RATE_MB_PER_SEC = 25  # More conservative estimate
+        #estimated_time_seconds = (drive.used * 1024) / TRANSFER_RATE_MB_PER_SEC
+        #estimated_time = int(timedelta(seconds=estimated_time_seconds) / timedelta(minutes=1))
+
 
         # Create a container frame
         container_frame = tk.Frame(self.master)
@@ -260,7 +286,7 @@ class SDCardUploaderGUI:
         confirm_window.grid(pady=20, padx=10)
 
         tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?").pack(pady=10)
-        self.download_time = tk.Label(confirm_window, text=f"Estimated download time: {estimated_time} minutes").pack(pady=10)
+        self.download_time = tk.Label(confirm_window, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device").pack(pady=10)
         # Progress bar setup
         self.progress_text = tk.StringVar()
         self.progress_text.set("0%")
@@ -273,19 +299,23 @@ class SDCardUploaderGUI:
         autodelete_box.pack(pady=10)
 
         # A confirmation button to start the "upload"
-        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download(estimated_time_seconds))
+        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download())
         self.confirm_btn.pack(pady=10)
 
-    def start_card_download(self, estimated_time_seconds):
+    def start_card_download(self):
         """Simulates the upload process by updating the progress bar."""
         try:
             logger.info(f"Starting card download from {self.drive.device}")
             self.confirm_btn.config(state=tk.DISABLED)
-            self.temp_folder = sd.create_temp_folder()
+            self.temp_folder = create_temp_folder(Path(os.getenv('DOWNLOAD_FOLDER')))
             logger.info(f"Created temp folder: {self.temp_folder}")
             
             self.locked = True
-            self.download_thread = start_download(self.drive.mountpoint, self.temp_folder)
+            self.download_thread = CopyThread(self.drive.mountpoint,
+                                              self.temp_folder,
+                                              self.drive.file_total_size,
+                                              self.drive.file_count)
+            self.download_thread.start()
             logger.debug("Started download thread")
             
             self.update_progress()
@@ -298,10 +328,10 @@ class SDCardUploaderGUI:
     def update_progress(self):
         """Updates the progress bar and text."""
         # Get progress from the get_upload_progress function
-        progress_value = sd.get_upload_progress(self.drive.mountpoint, self.temp_folder)
+        progress = self.download_thread.get_progress()
         
         # Update the progress bar
-        self.progress['value'] = progress_value['progress_percent']
+        self.progress['value'] = progress.percent
         
         # Update the progress text
         # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
@@ -311,8 +341,8 @@ class SDCardUploaderGUI:
         if self.download_thread.is_alive():
             self.master.after(1000, self.update_progress)  # Update every second
         else:
-            ud_progress = sd.get_upload_progress(self.drive.mountpoint, self.temp_folder)
-            if ud_progress['progress_percent'] == 1:
+            ud_progress = self.download_thread.get_progress()
+            if not self.download_thread.error_message:
                 logger.info("Upload completed!")
                 self.progress_text.set("100%")
                 # self.locked = False
@@ -328,13 +358,7 @@ class SDCardUploaderGUI:
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
             
-    def download_complete(self):
-        self.locked = True
-        messagebox.showinfo("Backing up", "Backing up to server, might take a wee bit")
-        start_upload_thread = start_upload(self.temp_folder, self.data_entry_info)
-        messagebox.showinfo("Done", "All done you schmuck")
-        self.locked = False
-        # self.master.quit()
+
 
     def create_camtrap_tables(self, data_entry_info):
         '''
@@ -428,7 +452,7 @@ def start_gui():
 def check_sd_loop():
     old_sd_card = None
     while True:
-        sd_card_check = sd.check_sd()
+        sd_card_check = sd.DummySdXDeviceLoader().load_sd_devices()
         mounted_drive_check = [card.device for card in sd_card_check]
         #logger.info(f"Checking for SD cards: {mounted_drive_check}, old: {old_sd_card}")
         if not sd_card_check:
@@ -446,6 +470,9 @@ def check_sd_loop():
 
 if __name__ == "__main__":
     # check_sd_loop()
+    load_dotenv()
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+    logging.basicConfig(level=LOG_LEVEL)
     start_gui()
 
 ############## GUI

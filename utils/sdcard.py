@@ -102,7 +102,7 @@ def get_modification_range(path):
                 earliest_time = file_path.stat().st_mtime
     latest_datetime = datetime.fromtimestamp(latest_time)
     earliest_datetime = datetime.fromtimestamp(earliest_time)
-    return {'earliest_image': earliest_datetime, 'latest_image': latest_datetime}
+    return ModificationRange(earliest_datetime, latest_datetime)
 
 
 

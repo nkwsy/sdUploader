@@ -22,6 +22,7 @@ from utils.copy_tools import create_temp_folder, CopyThread
 from pathlib import Path
 
 from utils.sdcard_loader import ComboLoader
+from utils.copy_tools import FileManifest
 
 from upload_manager import UploadManager
 
@@ -75,7 +76,7 @@ class SDCardUploaderGUI:
                                                 text="Open Upload Manager",
                                                 command=self.open_upload_manager)
         upload_manager_button.grid(row=2, column=0, rowspan=1, padx=10, sticky=tk.E + tk.W + tk.N + tk.S)
-        #upload_manager_button.config(width=10, height=5)
+
 
         self.download_thread = None
         self.download_thread = None
@@ -183,25 +184,29 @@ class SDCardUploaderGUI:
         # Update the labels in the GUI with the new info from the drive
         ttk.Label(drive_frame, text=f"File Count: {drive.file_count}").grid(row=1, column=0, sticky=tk.E, pady=4)
         ttk.Label(drive_frame, text=f"Devices: {drive.camera_types}").grid(row=3, column=0, sticky=tk.W, pady=4)
-        ttk.Label(drive_frame, text=f"Newest file: {drive.modification_date_range.latest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
-        ttk.Label(drive_frame, text=f"Oldest file: {drive.modification_date_range.earliest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
+        if drive.modification_date_range:
+            ttk.Label(drive_frame, text=f"Newest file: {drive.modification_date_range.latest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=5, column=0, sticky=tk.W, pady=2)
+            ttk.Label(drive_frame, text=f"Oldest file: {drive.modification_date_range.earliest_image.strftime('%Y-%m-%d %H:%M:%S')}").grid(row=6, column=0, sticky=tk.W, pady=2)
             
     def select_drive(self, drive):
         """Handle the drive selection and display the upload confirmation."""
-        print(f"Selected drive: {drive.device}")
+        logging.info(f"Selected drive: {drive.device}")
         self.drive = drive
         # self.upload_confirmation(self.drive)
-        self.create_data_entry(self.master)
+        self.create_data_entry(self.master, drive)
     
     def turn_red(self, event):
         event.widget["activeforeground"] = "red"
 
-    def create_data_entry(self, master):
+    def create_data_entry(self, master, drive):
         # Create a container frame
         entry_frame = tk.Frame(self.master)
-        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E)
+        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E)
+        ttk.Label(entry_frame, text=f"Step 1: Enter card metadata").grid(row=0, column=0, sticky=W, padx=10, pady=10)
+
+
         # Create a LabelFrame for the confirmation embedded in the container frame
-        self.entry_window = ttk.LabelFrame(entry_frame, text='Upload Progress')
+        self.entry_window = ttk.LabelFrame(entry_frame, text=f'Selected card: {drive.device}')
         self.entry_window.grid(pady=20, padx=10)
         self.data_entry(self.entry_window)
 
@@ -281,12 +286,16 @@ class SDCardUploaderGUI:
         container_frame = tk.Frame(self.master)
         container_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E)
 
+        ttk.Label(container_frame, text=f"Step 2: Download card to local machine").grid(row=0, column=0, sticky=W, padx=10, pady=10)
+
         # Create a LabelFrame for the confirmation embedded in the container frame
-        confirm_window = ttk.LabelFrame(container_frame, text='Upload Progress')
+        confirm_window = ttk.LabelFrame(container_frame, text='Download status')
         confirm_window.grid(pady=20, padx=10)
 
-        tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?").pack(pady=10)
-        self.download_time = tk.Label(confirm_window, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device").pack(pady=10)
+        self.confirm_message = tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?")
+        self.confirm_message.pack(pady=10)
+        self.download_time = tk.Label(confirm_window, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device")
+        self.download_time.pack(pady=10)
         # Progress bar setup
         self.progress_text = tk.StringVar()
         self.progress_text.set("0%")
@@ -299,12 +308,14 @@ class SDCardUploaderGUI:
         autodelete_box.pack(pady=10)
 
         # A confirmation button to start the "upload"
-        self.confirm_btn = tk.Button(confirm_window, text="Start Upload", command=lambda: self.start_card_download())
+        self.confirm_btn = tk.Button(confirm_window, text="Start Download", command=lambda: self.start_card_download())
         self.confirm_btn.pack(pady=10)
 
     def start_card_download(self):
         """Simulates the upload process by updating the progress bar."""
         try:
+
+            self.confirm_message['text'] = f"Downloading data from card {self.drive.device}..."
             logger.info(f"Starting card download from {self.drive.device}")
             self.confirm_btn.config(state=tk.DISABLED)
             self.temp_folder = create_temp_folder(Path(os.getenv('DOWNLOAD_FOLDER')))
@@ -332,6 +343,8 @@ class SDCardUploaderGUI:
         
         # Update the progress bar
         self.progress['value'] = progress.percent
+
+        self.download_time['text'] = f"Completed {progress.current_files} of {progress.total_files} files. Progress: {round(progress.percent * 100, 1)}%."
         
         # Update the progress text
         # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
@@ -345,10 +358,24 @@ class SDCardUploaderGUI:
             if not self.download_thread.error_message:
                 logger.info("Upload completed!")
                 self.progress_text.set("100%")
+                self.progress['value'] = 1
+                self.download_time['text'] = 'Download complete.'
+                self.confirm_message['text'] = ''
                 # self.locked = False
-                self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
+
+                file_manifest = FileManifest(
+                    self.drive.file_count,
+                    self.drive.file_total_size,
+                    self.drive.modification_date_range,
+                    self.download_thread.manifest_file_list
+                )
+
+                self.open_upload_manager()
+                self.upload_manager.add_upload_job(self.download_thread.destination_path, file_manifest)
+                #self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
                 # self.create_camtrap_tables(self.data_entry_info)
-                messagebox.showinfo("Upload Complete", "Upload Complete")
+
+                messagebox.showinfo("Card download complete", "Card download complete.", detail="It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress.")
                 self.wipeSDWindow(self.drive.mountpoint)
                 # self.download_complete()
             else:
@@ -358,6 +385,7 @@ class SDCardUploaderGUI:
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
             
+
 
 
     def create_camtrap_tables(self, data_entry_info):

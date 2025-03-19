@@ -205,7 +205,11 @@ if __name__ == "__main__":
         logging.info("Copy complete")
 
     manifest_file_list = copy_thread.manifest_file_list
-    manifest = FileManifest(sd_card.file_count, sd_card.file_total_size, sd_card.modification_date_range, manifest_file_list)
+    manifest = FileManifest(
+        sd_card.file_count,
+        sd_card.file_total_size,
+        sd_card.modification_date_range,
+        manifest_file_list)
     #print(manifest)
     print(manifest.to_json(indent=2))
 

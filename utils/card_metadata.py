@@ -56,21 +56,6 @@ def create_upload_folder(date, location, cameraid):
     return upload_folder
 
 
-def get_media_files_in_folder(dir):
-
-
-    # sd_files = os.listdir(dir)
-    sd_files = os.walk(dir)
-
-    # Filter for raw extension
-    # # selected_files = [os.path.join(dir, k) for k in sd_files if k.endswith(file_extension)]
-    # adjusted following https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#comment128971338_3207973
-    selected_files = [os.path.join(dir, k) for (dir, dirnames, filenames) in sd_files for k in filenames if
-                      k.endswith(file_extension)]
-    selected_files_out = ('\n').join(selected_files)
-    return selected_files_out
-
-
 # For the info file when we create the file list we preserve the behavior of the
 # previous code and filter the list to only include specific media files...
 # Why? Not sure... But that is what we're doing here.

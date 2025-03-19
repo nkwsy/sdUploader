@@ -4,6 +4,12 @@ from datetime import datetime
 import psutil
 from dotenv import load_dotenv
 import os
+import jsonpickle
+
+
+class DatetimeHandler(jsonpickle.handlers.BaseHandler):
+    def flatten(self, obj, data):
+        return obj.isoformat()
 
 class ModificationRange:
     def __init__(self, earliest_image, latest_image):
@@ -12,6 +18,11 @@ class ModificationRange:
     def __repr__(self):
         return f"ModificationRange(earliest_image={self.earliest_image}, latest_image={self.latest_image})"
 
+    def to_json(self, indent=None):
+        return jsonpickle.encode(self, unpicklable=False, indent=indent)
+    @staticmethod
+    def from_json(json):
+        return ModificationRange(datetime.fromisoformat(json["earliest_image"]), datetime.fromisoformat(json["latest_image"]))
 
 
 class SDCard:

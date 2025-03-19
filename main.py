@@ -18,8 +18,9 @@ import os
 import utils.camtrap_prep_1 as ucp
 import utils.csv_tools as csv_tools
 import sys
-from utils.copy_tools import create_temp_folder, CopyThread
+from utils.copy_tools import  CopyThread, CameraInfo
 from pathlib import Path
+from utils.card_metadata import create_download_folder
 
 from utils.sdcard_loader import ComboLoader
 from utils.copy_tools import FileManifest
@@ -78,7 +79,6 @@ class SDCardUploaderGUI:
         upload_manager_button.grid(row=2, column=0, rowspan=1, padx=10, sticky=tk.E + tk.W + tk.N + tk.S)
 
 
-        self.download_thread = None
         self.download_thread = None
 
         # self.create_manual_upload_frame()
@@ -261,11 +261,11 @@ class SDCardUploaderGUI:
 
     def submit_form(self):
         self.data_entry_info = {'photographer':self.photographer.get(),
-                                'camera':self.camera.get(), 
-                                'date':self.dateEntry.get_date(), 
-                                'location': self.location.get(), 
+                                'camera':self.camera.get(),
+                                'date':self.dateEntry.get_date(),
+                                'location': self.location.get(),
                                 'notes': self.notes.get(),
-                                'cameraid':self.cameraid.get(), 
+                                'cameraid':self.cameraid.get(),
                                 # 'file_list': sd.get_files_in_folder(dir.get())
                                 }
         print(self.data_entry_info)
@@ -318,14 +318,24 @@ class SDCardUploaderGUI:
             self.confirm_message['text'] = f"Downloading data from card {self.drive.device}..."
             logger.info(f"Starting card download from {self.drive.device}")
             self.confirm_btn.config(state=tk.DISABLED)
-            self.temp_folder = create_temp_folder(Path(os.getenv('DOWNLOAD_FOLDER')))
-            logger.info(f"Created temp folder: {self.temp_folder}")
+            self.download_folder = create_download_folder()
+            logger.info(f"Created temp folder: {self.download_folder}")
             
             self.locked = True
+
+            self.camera_info = CameraInfo(photographer=self.data_entry_info['photographer'],
+                                     camera=self.data_entry_info['camera'],
+                                     date=self.data_entry_info['date'],
+                                     location=self.data_entry_info['location'],
+                                     notes=self.data_entry_info['notes'],
+                                     cameraid=self.data_entry_info['cameraid'])
+
             self.download_thread = CopyThread(self.drive.mountpoint,
-                                              self.temp_folder,
-                                              self.drive.file_total_size,
-                                              self.drive.file_count)
+                                              self.download_folder,
+                                              camera_info=self.camera_info,
+                                              total_size=self.drive.file_total_size,
+                                              total_files=self.drive.file_count,
+                                              modification_range=self.drive.modification_date_range)
             self.download_thread.start()
             logger.debug("Started download thread")
             
@@ -363,15 +373,8 @@ class SDCardUploaderGUI:
                 self.confirm_message['text'] = ''
                 # self.locked = False
 
-                file_manifest = FileManifest(
-                    self.drive.file_count,
-                    self.drive.file_total_size,
-                    self.drive.modification_date_range,
-                    self.download_thread.manifest_file_list
-                )
-
                 self.open_upload_manager()
-                self.upload_manager.add_upload_job(self.download_thread.destination_path, file_manifest)
+                self.upload_manager.add_upload_job(self.download_thread.destination_path, self.download_thread.manifest)
                 #self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
                 # self.create_camtrap_tables(self.data_entry_info)
 

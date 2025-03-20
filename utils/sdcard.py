@@ -80,8 +80,7 @@ class SDCardAnalyzer:
         device_free_space = device_usage.free
         device_percent_free = device_usage.percent
 
-        sd_card = SDCard(device, mountpoint, device_total_space, device_used_space, device_free_space, device_percent_free)
-        return sd_card
+        return SDCard(device, mountpoint, device_total_space, device_used_space, device_free_space, device_percent_free)
 
 
 

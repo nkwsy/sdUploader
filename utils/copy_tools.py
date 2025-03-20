@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 import hashlib
 import shutil
+
+
 from utils.sdcard_loader import ComboLoader
 from utils.sdcard import SDCardAnalyzer, ModificationRange
 import os
@@ -91,6 +93,19 @@ class FileInfo:
     @staticmethod
     def from_json(json):
         return FileInfo(filename=json['filename'], size=json['size'], mtime=json['mtime'], md5_hash=json['md5_hash'])
+
+
+def write_manifest_file(path, file_manifest):
+    manifest_file_path = path / "manifest.json"
+    logging.debug(f"Writing manifest file: {manifest_file_path}")
+    try:
+        with open(manifest_file_path, "w") as f:
+            f.write(file_manifest.to_json(indent=2))
+            logging.debug(f"Wrote manifest file to {manifest_file_path / 'manifest.json'}")
+    except Exception as e:
+        logging.error(f"Error writing manifest file: {manifest_file_path}: {str(e)}")
+        raise
+
 
 
 def file_md5(file):
@@ -231,9 +246,7 @@ class CopyThread(Thread):
 
 
     def write_metadata_files(self):
-        with open(self.destination_path / "manifest.json", "w") as f:
-            f.write(self.manifest.to_json(indent=2))
-            logging.debug(f"Wrote manifest file to {self.destination_path / 'manifest.json'}")
+        write_manifest_file(self.destination_path, self.manifest)
 
     def run(self):
         logging.debug("Starting copy thread")

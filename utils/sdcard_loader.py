@@ -60,28 +60,3 @@ class ComboLoader:
 
 
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    dcim_cards = DCIMSDCardLoader(SDCardAnalyzer()).find_sd_cards()
-    dev_cards = DevNameSDCardLoader(SDCardAnalyzer()).find_sd_cards()
-    combo_cards = ComboLoader().find_sd_cards()
-
-    if not dcim_cards:
-        print("No DCIM Cards Found")
-    else:
-        for dcim_card in dcim_cards:
-            print(f"Device: {dcim_card.device}, Path: {dcim_card.mountpoint}")
-
-    if not dev_cards:
-        print("No SD Cards Found")
-    else:
-        for dev_card in dev_cards:
-            print(f"Device: {dev_card.device}, Path: {dev_card.mountpoint}")
-
-    if not combo_cards:
-        print("No Combo Cards Found")
-    else:
-        for combo_card in combo_cards:
-            print(f"Device: {combo_card.device}, Path: {combo_card.mountpoint}")
-    print(combo_cards)

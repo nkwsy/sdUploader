@@ -4,8 +4,9 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 
-from utils.copy_tools import FileManifest, CopyThread
-from utils.card_metadata import write_info_file, write_uploaded_marker_file, write_camera_info_file, create_upload_folder, find_download_metadata
+from utils.copy_tools import FileManifest, CopyThread, write_manifest_file
+from utils.card_metadata import (write_info_file, write_uploaded_marker_file, write_camera_info_file,
+                                 create_upload_folder, find_download_metadata)
 
 class CompletedJob:
     def __init__(self, download_path, upload_path, camera_info, file_manifest, status="Uploaded"):
@@ -44,10 +45,7 @@ class UploadThread(CopyThread):
         write_info_file(self.upload_path, self.camera_info, self.file_manifest)
         write_camera_info_file(self.upload_path, self.camera_info)
         write_uploaded_marker_file(self.download_path, self.upload_path)
-
-        with open(self.download_path / "manifest.json", "w") as f:
-            f.write(self.file_manifest.to_json(indent=2))
-            logging.debug(f"Wrote manifest file to {self.destination_path / 'manifest.json'}")
+        write_manifest_file(self.download_path, self.file_manifest)
 
         super().write_metadata_files()
 

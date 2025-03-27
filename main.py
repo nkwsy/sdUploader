@@ -434,9 +434,9 @@ class SDCardUploaderGUI:
     
     def check_if_working(self):
         if self.locked == True:
-            if self.upload_thread.is_alive():
+            if self.upload_manager and self.upload_manager.is_working():
                 time.sleep(5)
-            if self.download_thread.is_alive():
+            elif self.download_thread.is_alive():
                 time.sleep(5)
             else:
                 self.locked = False
@@ -458,6 +458,9 @@ class SDCardUploaderGUI:
             else:
                 tree.insert(parent_node, "end", text=item)
 
+
+# TODO: ON CLOSING IS BROKEN WITH NEW UPLOAD MANAGER STUFF
+# MAKE ALL THIS STUFF BETTER BETTER BETTER
 def on_closing(app_instance):
     logger.info(f"Application closing initiated. Locked status: {app_instance.locked}")
     root.withdraw()
@@ -480,27 +483,8 @@ def start_gui():
     app = SDCardUploaderGUI(root)
     root.mainloop()
 
-def check_sd_loop():
-    old_sd_card = None
-    while True:
-        sd_card_check = sd.DummySdXDeviceLoader().load_sd_devices()
-        mounted_drive_check = [card.device for card in sd_card_check]
-        #logger.info(f"Checking for SD cards: {mounted_drive_check}, old: {old_sd_card}")
-        if not sd_card_check:
-            print(sd_card_check)
-            print(type(sd_card_check))
-            old_sd_card = None
-            time.sleep(5)
-        elif mounted_drive_check == old_sd_card:
-            # logger.info(f"Identical SD cards detected: {mounted_drive_check} == {old_sd_card}")
-            time.sleep(5)
-        else:
-            logger.info(f"Starting Gui, SD card detected: {mounted_drive_check}")
-            old_sd_card = [card.device for card in sd_card_check]
-            start_gui()
 
 if __name__ == "__main__":
-    # check_sd_loop()
     load_dotenv()
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
     logging.basicConfig(level=LOG_LEVEL)

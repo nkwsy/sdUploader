@@ -148,6 +148,11 @@ class UploadManager:
         if live_jobs:
             self.master.after(100, self.update_upload_queue_tab)
 
+    def is_working(self):
+        for upload_job in self.upload_queue:
+            if isinstance(upload_job, UploadThread) and upload_job.is_alive():
+                return True
+        return False
 
     def load_completed_jobs(self):
         download_metadata = find_download_metadata()

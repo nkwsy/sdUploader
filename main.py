@@ -62,6 +62,7 @@ class SDCardUploaderGUI:
 
         self.create_auto_upload_frame()
         self.update_sd_cards()
+        self.create_skeleton_selection_pane(self.master)
 
         upload_manager_button = ttk.Button(self.master,
                                                 text="Open Upload Manager",
@@ -188,10 +189,16 @@ class SDCardUploaderGUI:
     def turn_red(self, event):
         event.widget["activeforeground"] = "red"
 
+
+    def create_skeleton_selection_pane(self, master):
+        skeleton_frame = tk.Frame(self.master)
+        skeleton_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
+        ttk.Label(skeleton_frame, text=f"Select a card to begin upload.").grid(row=0, column=0, sticky=W, padx=10, pady=10)
+
     def create_data_entry(self, master, drive):
         # Create a container frame
         entry_frame = tk.Frame(self.master)
-        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E)
+        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
         ttk.Label(entry_frame, text=f"Step 1: Enter card metadata").grid(row=0, column=0, sticky=W, padx=10, pady=10)
 
 
@@ -274,7 +281,7 @@ class SDCardUploaderGUI:
 
         # Create a container frame
         container_frame = tk.Frame(self.master)
-        container_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E)
+        container_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E+tk.N)
 
         ttk.Label(container_frame, text=f"Step 2: Download card to local machine").grid(row=0, column=0, sticky=W, padx=10, pady=10)
 

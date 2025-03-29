@@ -54,7 +54,7 @@ class SDCardUploaderGUI:
         self.navbar.add(self.tab1, text="Auto Upload")
         # self.navbar.add(self.tab2, text="Manual Upload")
         # self.navbar.pack(expand=1, fill="both")
-        self.navbar.grid(row=1, sticky=tk.W+tk.E+tk.N+tk.S, padx=10, pady=10)
+        self.navbar.grid(row=1, rowspan=2, sticky=tk.W+tk.E+tk.N+tk.S, padx=10, pady=10)
 
 
         self.dir = StringVar()
@@ -63,25 +63,19 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
         self.create_skeleton_selection_pane(self.master)
-
-        upload_manager_button = ttk.Button(self.master,
-                                                text="Open Upload Manager",
-                                                command=self.open_upload_manager)
-        upload_manager_button.grid(row=2, column=0, rowspan=1, padx=10, sticky=tk.E + tk.W + tk.N + tk.S)
+        self.create_upload_manager()
 
 
         self.download_thread = None
 
         # self.create_manual_upload_frame()
 
-    def open_upload_manager(self):
+    def create_upload_manager(self):
         logger.info("Opening upload manager")
-        if not self.upload_manager:
-            self.upload_manager = UploadManager(self)
+        upload_manager_frame = tk.Frame(self.master)
+        upload_manager_frame.grid(row=2, rowspan=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
+        self.upload_manager = UploadManager(upload_manager_frame)
 
-    def remove_upload_manager(self):
-        logger.info("Removing upload manager")
-        self.upload_manager = None
 
     def printProgressBar(self, value, max):
         phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
@@ -301,7 +295,7 @@ class SDCardUploaderGUI:
 
         # autodelete checkbox
         self.autodelete = tk.IntVar()
-        autodelete_box = tk.Checkbutton(confirm_window, text='Automaticly clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
+        autodelete_box = tk.Checkbutton(confirm_window, text='Automatically clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
         autodelete_box.pack(pady=10)
 
         # A confirmation button to start the "upload"
@@ -370,7 +364,6 @@ class SDCardUploaderGUI:
                 self.confirm_message['text'] = ''
                 # self.locked = False
 
-                self.open_upload_manager()
                 self.upload_manager.add_upload_job(self.download_thread.destination_path, self.download_thread.manifest)
 
 

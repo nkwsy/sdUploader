@@ -66,15 +66,10 @@ class UploadThread(CopyThread):
 
 class UploadManager:
 
-    def __init__(self, main_window):
-        self.main_window = main_window
-        self.master = tk.Toplevel()
-        self.master.title("Upload Manager")
-        self.master.geometry("800x600")
-
+    def __init__(self, master):
         self.upload_queue = []
         self.upload_threads = []
-
+        self.master = master
         self.titleLabel = tk.Label(self.master, text="Upload Manager", font=("Comic Sans MS", 16, "bold"), fg="purple")
 
 
@@ -100,6 +95,7 @@ class UploadManager:
         treeview.heading("total_size", text="Total Size")
         treeview.heading("status", text="Status")
         treeview.heading("download_path", text="Download Path")
+        #treeview.grid(row=0, column=0, sticky='nsew')
 
         self.tree_scroll = ttk.Scrollbar(self.master, orient='vertical', command=self.upload_queue_treeview.yview)
         self.upload_queue_treeview.config(yscrollcommand=self.tree_scroll.set)
@@ -119,22 +115,13 @@ class UploadManager:
         self.load_completed_jobs()
 
 
-        #button_close = ttk.Button(
-        #    self.master,
-        #    text="Close window",
-        #    command=self.destroy)
-        #button_close.place(x=75, y=75)
-
-    def destroy(self):
-        self.main_window.remove_upload_manager()
-        self.master.destroy()
-
     def update_upload_queue_tab(self, new_upload_job=None):
         # We're going to move completed jobs to a different queue in a bit (but not now)
         for index, upload_job in enumerate(self.upload_queue):
             self.upload_queue_treeview.delete(index)
         if new_upload_job:
             self.upload_queue.append(new_upload_job)
+        self.upload_queue.sort(reverse=True, key=lambda x: x.download_path.name)
         live_jobs = False
         for index, upload_job in enumerate(self.upload_queue):
             if isinstance(upload_job, UploadThread) and upload_job.is_alive():

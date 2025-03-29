@@ -20,7 +20,10 @@ from upload_manager import UploadThread
 
 def upload_files(download_folder, camera_info, file_manifest):
     logging.debug(f"Preparing for upload for camera: {camera_info.cameraid}")
-    upload_folder = create_upload_folder(camera_info.date, camera_info.location, camera_info.cameraid)
+    upload_folder = create_upload_folder(camera_info.date,
+                                         camera_info.camera,
+                                         camera_info.location,
+                                         camera_info.cameraid)
 
     upload_thread = CopyThread(
         download_folder,
@@ -89,7 +92,10 @@ if __name__ == "__main__":
 
     #upload_files(download_folder, camera_info, manifest)
 
-    upload_folder = create_upload_folder(camera_info.date, camera_info.location, camera_info.cameraid)
+    upload_folder = create_upload_folder(camera_info.date,
+                                         camera_info.camera,
+                                         camera_info.location,
+                                         camera_info.cameraid)
     upload_thread = UploadThread(download_folder,
                                  upload_folder,
                                  camera_info,

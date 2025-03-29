@@ -41,13 +41,13 @@ def find_download_metadata():
     return manifest_files
 
 
-def create_upload_folder(date, location, cameraid):
+def create_upload_folder(date, camera, location, cameraid):
     base_path = Path(os.getenv('UPLOAD_FOLDER'))
     folder_suffix = cameraid if cameraid else location
     folder_name = f"{date.strftime('%Y-%m-%d')}_{folder_suffix}"
 
     year_folder = f"{date.year}"
-    upload_folder = base_path / year_folder / folder_name
+    upload_folder = base_path / camera / year_folder / folder_name
     logging.debug(f"Creating upload folder: {upload_folder}")
     try:
         upload_folder.mkdir(parents=True, exist_ok=True)
@@ -99,5 +99,6 @@ def write_uploaded_marker_file(download_folder, upload_folder):
     except Exception as e:
         logging.error(f"Error writing uploaded marker file: {marker_file_path}: {str(e)}")
         raise
+
 
 

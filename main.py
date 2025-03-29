@@ -28,19 +28,9 @@ from utils.copy_tools import FileManifest
 from upload_manager import UploadManager
 
 
-def start_download(src, dst):
-    """Starts the download process in a separate thread."""
-    logger.info(f"Starting download thread from {src} to {dst}")
-    thread = threading.Thread(target=sd.copy_directory_contents, args=(src, dst))
-    thread.start()
-    return thread
 
-def start_upload(folder, info):
-    """Starts the upload process in a separate thread."""
-    logger.info(f"Starting upload thread from {folder} with info: {info}")
-    thread = threading.Thread(target=sd.simple_upload_files, args=(folder, info))
-    thread.start()
-    return thread
+
+
 
 class SDCardUploaderGUI:
 
@@ -375,21 +365,20 @@ class SDCardUploaderGUI:
 
                 self.open_upload_manager()
                 self.upload_manager.add_upload_job(self.download_thread.destination_path, self.download_thread.manifest)
-                #self.upload_thread = start_upload(self.temp_folder, self.data_entry_info)
-                # self.create_camtrap_tables(self.data_entry_info)
+
+
+                # TODO: Need to re-enable this code path
+                #self.create_camtrap_tables(self.data_entry_info)
 
                 messagebox.showinfo("Card download complete", "Card download complete.", detail="It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress.")
                 self.wipeSDWindow(self.drive.mountpoint)
-                # self.download_complete()
+
             else:
                 logger.warning("Upload failed!")
                 self.progress_text.set("Upload failed!")
                 self.locked = False
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
-            
-
-
 
     def create_camtrap_tables(self, data_entry_info):
         '''
@@ -406,7 +395,7 @@ class SDCardUploaderGUI:
             time.sleep(2)
             print(f'Waiting for deploy directory {deploy_home_folder}')
         ucp.prep_camtrap_dp(file_path_raw=deploy_home_folder, data_input=data_entry_info)
-       
+
     def browse_button(self):
         filename = fd.askdirectory(initialdir= sd.sd_photo_folder)
         print(filename)

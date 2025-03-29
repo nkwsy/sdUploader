@@ -165,7 +165,10 @@ class UploadManager:
         logging.debug(f"Adding upload job for {download_path} with manifest {file_manifest}")
 
 
-        upload_path = create_upload_folder(file_manifest.camera_info.date, file_manifest.camera_info.location, file_manifest.camera_info.cameraid)
+        upload_path = create_upload_folder(file_manifest.camera_info.date,
+                                           file_manifest.camera_info.camera,
+                                           file_manifest.camera_info.location,
+                                           file_manifest.camera_info.cameraid)
 
         logging.debug("Starting upload thread")
         upload_job = UploadThread(download_path, upload_path, file_manifest.camera_info, file_manifest)

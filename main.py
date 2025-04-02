@@ -29,6 +29,79 @@ from upload_manager import UploadManager
 
 
 
+class DataEntryForm:
+    def __init__(self):
+        pass
+    def show_form(self, container_frame, drive, callback):
+        self.container_frame = container_frame
+        self.drive = drive
+        self.callback = callback
+
+        ttk.Label(self.container_frame, text=f"Step 1: Enter card metadata").grid(row=0, column=0, sticky=W, padx=10, pady=10)
+        self.entry_window = ttk.LabelFrame(self.container_frame, text=f'Selected card: {self.drive.device}')
+        self.entry_window.grid(pady=20, padx=10)
+        self.create_data_entry_fields(self.entry_window)
+
+    def create_data_entry_fields(self, manual_frame):
+        self.photographer = StringVar()
+        ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
+        ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
+        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photographer)
+        self.nameEntry.grid(column=1, row=1, sticky=(W, E))
+
+        # Camera Type
+        self.camera = StringVar()
+        ttk.Label(manual_frame, text="Camera Type").grid(column=0, row=2, sticky=W)
+        ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
+        self.cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera, values=(
+        '360Camera', 'Drone', 'GoPro', 'Wildlife_Camera', 'DSLR', 'Underwater_GoPro', 'Mixed', 'Other'))
+        self.cameraEntry.grid(column=1, row=2, sticky=(W, E))
+
+        # Camera ID
+        self.cameraid = StringVar()
+        ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
+        ttk.Label(manual_frame, text="Recommended - See camera inventory: tinyurl.com/bdhmzhme").grid(column=2, row=3,
+                                                                                                      sticky=W)
+        camera_table = csv_tools.rows('data/camera_inventory.csv')
+        camera_names = [row['cameraID'] for row in camera_table]
+        camera_names.sort()
+        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(camera_names))
+        self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
+
+        # Location
+        self.location = StringVar()
+        ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
+        ttk.Label(manual_frame, text="Required. No spaces. Type or use drop-down. See tinyurl.com/ur-camera-map").grid(
+            column=2, row=4, sticky=W)
+        location_table = csv_tools.rows('data/camtrap_locations.csv')
+        location_names = [row['locationName'] for row in location_table]
+        location_names.sort()
+        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(location_names))
+        self.nameEntry.grid(column=1, row=4, sticky=(W, E))
+
+        # Date Entry
+        self.date = StringVar()
+        ttk.Label(manual_frame, text="Date").grid(column=0, row=5, sticky=W)
+        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
+        self.dateEntry.grid(column=1, row=5, sticky=(W, E))
+
+        self.notes = StringVar()
+        ttk.Label(manual_frame, text="Notes").grid(column=0, row=6, sticky=W)
+        self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
+        self.notesEntry.grid(column=1, row=6, sticky=(W, E))
+
+        submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
+        submit_button.grid(row=8, column=1, padx=10, pady=10)
+
+    def submit_form(self):
+        self.camera_info = CameraInfo(camera=self.camera.get(),
+                                      cameraid=self.cameraid.get(),
+                                      location=self.location.get(),
+                                      date=self.dateEntry.get_date(),
+                                      notes=self.notes.get(),
+                                      photographer=self.photographer.get())
+        logging.debug(f"Camera info submitted: {self.camera_info}")
+        self.callback()
 
 
 
@@ -65,10 +138,10 @@ class SDCardUploaderGUI:
         self.create_skeleton_selection_pane(self.master)
         self.create_upload_manager()
 
+        self.data_entry_form = DataEntryForm()
 
         self.download_thread = None
 
-        # self.create_manual_upload_frame()
 
     def create_upload_manager(self):
         logger.info("Opening upload manager")
@@ -77,20 +150,8 @@ class SDCardUploaderGUI:
         self.upload_manager = UploadManager(upload_manager_frame)
 
 
-    def printProgressBar(self, value, max):
-        phrase = "Uploading... do not exit or pull out SD. Copying file: " + str(value)+ ' of '+ str(max)
-        progress = ttk.Progressbar(manual_frame, orient=HORIZONTAL, maximum=max, mode='determinate')
-        progress.grid(column=1, row=8, sticky=(W, E))
-        ttk.Label(manual_frame, text=phrase).grid(column=2, row=8, sticky=W)
-        progress['value'] = value
-        progress.update()
-        logger.info(value)
-        pass
     
-    def create_manual_upload_frame(self):
-        manual_frame = ttk.LabelFrame(self.master, text='Simple Catagorization', padding=10)
-        manual_frame.grid(column=0, row=10, sticky=(tk.N, tk.W, tk.E, tk.S))
-        data_entry(manual_frame)
+
 
     def create_auto_upload_frame(self):
         # sd_cards = sd.check_sd()
@@ -178,7 +239,12 @@ class SDCardUploaderGUI:
         logging.info(f"Selected drive: {drive.device}")
         self.drive = drive
         # self.upload_confirmation(self.drive)
-        self.create_data_entry(self.master, drive)
+
+        entry_frame = tk.Frame(self.master)
+        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
+
+        self.data_entry_form.show_form(entry_frame, self.drive, self.upload_confirmation)
+
     
     def turn_red(self, event):
         event.widget["activeforeground"] = "red"
@@ -201,69 +267,13 @@ class SDCardUploaderGUI:
         self.entry_window.grid(pady=20, padx=10)
         self.data_entry(self.entry_window)
 
-    def data_entry(self, manual_frame):
-        self.photographer = StringVar()
-        ttk.Label(manual_frame, text="Photographer").grid(column=0, row=1, sticky=W)
-        ttk.Label(manual_frame, text="Who took or uploaded these photos").grid(column=2, row=1, sticky=W)
-        self.nameEntry = ttk.Entry(manual_frame, width=7, textvariable=self.photographer)
-        self.nameEntry.grid(column=1, row=1, sticky=(W, E))
-
-        # Camera Type
-        self.camera = StringVar()
-        ttk.Label(manual_frame, text="Camera Type").grid(column=0, row=2, sticky=W)
-        ttk.Label(manual_frame, text="Type of device or use").grid(column=2, row=2, sticky=W)
-        self.cameraEntry = ttk.Combobox(manual_frame, textvariable=self.camera, values=('360Camera', 'Drone', 'GoPro' , 'Wildlife_Camera', 'DSLR','Underwater_GoPro', 'Mixed', 'Other'))
-        self.cameraEntry.grid(column=1, row=2, sticky=(W, E))
-
-        # Camera ID
-        self.cameraid = StringVar()
-        ttk.Label(manual_frame, text="Camera ID").grid(column=0, row=3, sticky=W)
-        ttk.Label(manual_frame, text="Recommended - See camera inventory: tinyurl.com/bdhmzhme").grid(column=2, row=3, sticky=W)
-        camera_table = csv_tools.rows('data/camera_inventory.csv')
-        camera_names = [row['cameraID'] for row in camera_table]
-        camera_names.sort()
-        self.cameraIDentry = ttk.Combobox(manual_frame, textvariable=self.cameraid, values=(camera_names))
-        self.cameraIDentry.grid(column=1, row=3, sticky=(W, E))
-        
-        # Location
-        self.location = StringVar()
-        ttk.Label(manual_frame, text="Location/Title").grid(column=0, row=4, sticky=W)
-        ttk.Label(manual_frame, text="Required. No spaces. Type or use drop-down. See tinyurl.com/ur-camera-map").grid(column=2, row=4, sticky=W)
-        location_table = csv_tools.rows('data/camtrap_locations.csv')
-        location_names = [row['locationName'] for row in location_table]
-        location_names.sort()
-        self.nameEntry = ttk.Combobox(manual_frame, textvariable=self.location, values=(location_names))
-        self.nameEntry.grid(column=1, row=4, sticky=(W, E))
-
-        # Date Entry
-        self.date = StringVar()
-        ttk.Label(manual_frame, text="Date").grid(column=0, row=5, sticky=W)
-        self.dateEntry = tkcalendar.DateEntry(manual_frame, width=7, textvariable=self.date)
-        self.dateEntry.grid(column=1, row=5, sticky=(W, E))
-
-        self.notes = StringVar()
-        ttk.Label(manual_frame, text="Notes").grid(column=0, row=6, sticky=W)
-        self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
-        self.notesEntry.grid(column=1, row=6, sticky=(W, E))
-
-        submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
-        submit_button.grid(row=8, column=1, padx=10, pady=10)
 
 
-    def submit_form(self):
-        self.data_entry_info = {'photographer':self.photographer.get(),
-                                'camera':self.camera.get(),
-                                'date':self.dateEntry.get_date(),
-                                'location': self.location.get(),
-                                'notes': self.notes.get(),
-                                'cameraid':self.cameraid.get(),
-                                # 'file_list': sd.get_files_in_folder(dir.get())
-                                }
-        print(self.data_entry_info)
-        self.upload_confirmation(self.drive)
+
+
         
 
-    def upload_confirmation(self, drive):
+    def upload_confirmation(self):
         """Displays a confirmation box with a progress bar and estimated upload time."""
 
         # Calculate estimated upload time
@@ -272,6 +282,7 @@ class SDCardUploaderGUI:
         #estimated_time_seconds = (drive.used * 1024) / TRANSFER_RATE_MB_PER_SEC
         #estimated_time = int(timedelta(seconds=estimated_time_seconds) / timedelta(minutes=1))
 
+        drive = self.drive
 
         # Create a container frame
         container_frame = tk.Frame(self.master)
@@ -302,6 +313,11 @@ class SDCardUploaderGUI:
         self.confirm_btn = tk.Button(confirm_window, text="Start Download", command=lambda: self.start_card_download())
         self.confirm_btn.pack(pady=10)
 
+
+
+
+
+
     def start_card_download(self):
         """Simulates the upload process by updating the progress bar."""
         try:
@@ -314,12 +330,7 @@ class SDCardUploaderGUI:
             
             self.locked = True
 
-            self.camera_info = CameraInfo(photographer=self.data_entry_info['photographer'],
-                                     camera=self.data_entry_info['camera'],
-                                     date=self.data_entry_info['date'],
-                                     location=self.data_entry_info['location'],
-                                     notes=self.data_entry_info['notes'],
-                                     cameraid=self.data_entry_info['cameraid'])
+            self.camera_info = self.data_entry_form.camera_info
 
             self.download_thread = CopyThread(self.drive.mountpoint,
                                               self.download_folder,
@@ -379,6 +390,9 @@ class SDCardUploaderGUI:
                 self.locked = False
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
+
+
+
 
     def create_camtrap_tables(self, data_entry_info):
         '''
@@ -479,41 +493,3 @@ if __name__ == "__main__":
     logging.basicConfig(level=LOG_LEVEL)
     start_gui()
 
-############## GUI
-# root = Tk()
-
-
-###start
-
-
-# root.title("SD card uploader")
-
-# navbar = ttk.Notebook(root)
-# tab1 = ttk.Frame(navbar)
-# tab2 = ttk.Frame(navbar)
-# navbar.add(tab1, text="Auto Upload")
-# navbar.add(tab2, text="Manual Upload")
-# navbar.pack(expand=1, fill="both")
-
-# self.tab1 = ttk.Frame(tab1, padding="3 3 12 12")
-# self.tab1.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-
-# manual_frame = ttk.Frame(tab2, padding="3 3 12 12")
-# manual_frame.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-
-# root.columnconfigure(0, weight=1)
-# root.rowconfigure(0, weight=1)
-
-
-###end
-# mainframe = ttk.Frame(root, padding="3 3 12 12")
-# mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
-# root.columnconfigure(0, weight=1)
-# root.rowconfigure(0, weight=1)
-#TODO make this a class
-#### Manual upload frame
-# Ranger Name
-# # Delete after upload
-# wipeSD = BooleanVar(value=True)
-# wipeSDEntry = ttk.Checkbutton(mainframe, text='Wipe SD after upload',
-# 	    variable=wipeSD

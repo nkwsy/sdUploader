@@ -90,7 +90,7 @@ class DataEntryForm:
         self.notesEntry = ttk.Entry(manual_frame, width=19, textvariable=self.notes)
         self.notesEntry.grid(column=1, row=6, sticky=(W, E))
 
-        submit_button = ttk.Button(manual_frame, text="Submit", command=self.submit_form)
+        submit_button = ttk.Button(manual_frame, text="Enter Camera Info", command=self.submit_form)
         submit_button.grid(row=8, column=1, padx=10, pady=10)
 
     def submit_form(self):
@@ -136,18 +136,18 @@ class SDCardUploaderGUI:
         self.create_auto_upload_frame()
         self.update_sd_cards()
         self.create_skeleton_selection_pane(self.master)
-        self.create_upload_manager()
+
 
         self.data_entry_form = DataEntryForm()
 
         self.download_thread = None
 
+        self.download_frame = None
 
-    def create_upload_manager(self):
-        logger.info("Opening upload manager")
         upload_manager_frame = tk.Frame(self.master)
         upload_manager_frame.grid(row=2, rowspan=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
         self.upload_manager = UploadManager(upload_manager_frame)
+
 
 
     
@@ -236,6 +236,8 @@ class SDCardUploaderGUI:
             
     def select_drive(self, drive):
         """Handle the drive selection and display the upload confirmation."""
+        self.cleanup_last_download()
+
         logging.info(f"Selected drive: {drive.device}")
         self.drive = drive
         # self.upload_confirmation(self.drive)
@@ -255,20 +257,12 @@ class SDCardUploaderGUI:
         skeleton_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
         ttk.Label(skeleton_frame, text=f"Select a card to begin upload.").grid(row=0, column=0, sticky=W, padx=10, pady=10)
 
-    def create_data_entry(self, master, drive):
-        # Create a container frame
-        entry_frame = tk.Frame(self.master)
-        entry_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W + tk.E + tk.N)
-        ttk.Label(entry_frame, text=f"Step 1: Enter card metadata").grid(row=0, column=0, sticky=W, padx=10, pady=10)
-
-
-        # Create a LabelFrame for the confirmation embedded in the container frame
-        self.entry_window = ttk.LabelFrame(entry_frame, text=f'Selected card: {drive.device}')
-        self.entry_window.grid(pady=20, padx=10)
-        self.data_entry(self.entry_window)
 
 
 
+    def cleanup_last_download(self):
+        if self.download_frame:
+            self.download_frame.destroy()
 
 
         
@@ -287,6 +281,7 @@ class SDCardUploaderGUI:
         # Create a container frame
         container_frame = tk.Frame(self.master)
         container_frame.grid(row=1, column=3, padx=10, pady=10, sticky=tk.W+tk.E+tk.N)
+        self.download_frame = container_frame
 
         ttk.Label(container_frame, text=f"Step 2: Download card to local machine").grid(row=0, column=0, sticky=W, padx=10, pady=10)
 
@@ -294,9 +289,9 @@ class SDCardUploaderGUI:
         confirm_window = ttk.LabelFrame(container_frame, text='Download status')
         confirm_window.grid(pady=20, padx=10)
 
-        self.confirm_message = tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?")
+        self.confirm_message = tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?", font="none 10 bold")
         self.confirm_message.pack(pady=10)
-        self.download_time = tk.Label(confirm_window, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device")
+        self.download_time = tk.Label(confirm_window, wraplength=320, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device")
         self.download_time.pack(pady=10)
         # Progress bar setup
         self.progress_text = tk.StringVar()
@@ -306,12 +301,19 @@ class SDCardUploaderGUI:
 
         # autodelete checkbox
         self.autodelete = tk.IntVar()
-        autodelete_box = tk.Checkbutton(confirm_window, text='Automatically clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
-        autodelete_box.pack(pady=10)
+        self.autodelete_box = tk.Checkbutton(confirm_window, text='Automatically clear SD after upload?',variable=self.autodelete, onvalue=1, offvalue=0)
+        self.autodelete_box.pack(pady=10)
+
+        self.erase_card_btn = tk.Button(confirm_window, text="Erase Card", command=lambda: self.erase_card(self.drive))
+        self.erase_card_btn.pack(pady=10, side=LEFT)
+        self.erase_card_btn.config(state=tk.DISABLED)
+
 
         # A confirmation button to start the "upload"
         self.confirm_btn = tk.Button(confirm_window, text="Start Download", command=lambda: self.start_card_download())
-        self.confirm_btn.pack(pady=10)
+        self.confirm_btn.pack(pady=10, side=RIGHT)
+
+
 
 
 
@@ -325,6 +327,7 @@ class SDCardUploaderGUI:
             self.confirm_message['text'] = f"Downloading data from card {self.drive.device}..."
             logger.info(f"Starting card download from {self.drive.device}")
             self.confirm_btn.config(state=tk.DISABLED)
+            self.autodelete_box.config(state=tk.DISABLED)
             self.download_folder = create_download_folder()
             logger.info(f"Created temp folder: {self.download_folder}")
             
@@ -368,11 +371,8 @@ class SDCardUploaderGUI:
         else:
             ud_progress = self.download_thread.get_progress()
             if not self.download_thread.error_message:
-                logger.info("Upload completed!")
-                self.progress_text.set("100%")
-                self.progress['value'] = 1
-                self.download_time['text'] = 'Download complete.'
-                self.confirm_message['text'] = ''
+                logger.info("Download completed!")
+
                 # self.locked = False
 
                 self.upload_manager.add_upload_job(self.download_thread.destination_path, self.download_thread.manifest)
@@ -381,16 +381,35 @@ class SDCardUploaderGUI:
                 # TODO: Need to re-enable this code path
                 #self.create_camtrap_tables(self.data_entry_info)
 
-                messagebox.showinfo("Card download complete", "Card download complete.", detail="It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress.")
-                self.wipeSDWindow(self.drive.mountpoint)
+                self.confirm_message['text'] = f"Card download complete"
+                self.download_time['text'] = f"It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress."
+                self.progress_text.set("100%")
+                self.progress['value'] = 1
+
+                print(type(self.autodelete.get()))
+
+                self.erase_card_btn.config(state=tk.NORMAL)
+                if self.autodelete.get() == 1:
+                    self.erase_card(self.drive)
+
+
+
+                #messagebox.showinfo("Card download complete", "Card download complete.", detail="It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress.")
+                #self.wipeSDWindow(self.drive.mountpoint)
 
             else:
-                logger.warning("Upload failed!")
-                self.progress_text.set("Upload failed!")
+                logging.warning("Upload failed!")
+                self.confirm_message['text'] = "Upload failed."
+                self.download_time['text'] = "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help."
                 self.locked = False
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
 
+
+    def erase_card(self, drive):
+        logging.debug(f"Erasing card {drive.device}")
+        self.erase_card_btn.config(state=tk.DISABLED)
+        # TODO: Erase card in a separate thread, report on status in the main window, etc. How fun!
 
 
 

@@ -12,11 +12,11 @@ class DCIMSDCardLoader:
     def find_sd_cards(self):
         sd_cards = []
         for disk in psutil.disk_partitions():
-            logging.debug(f"Checking {disk.device}")
+            #logging.debug(f"Checking {disk.device}")
             mountpoint_path = Path(disk.mountpoint)
             dcim_path = mountpoint_path / 'DCIM'
             if dcim_path.exists():
-                logging.debug(f"Found DCIM Card: {disk.device}")
+                #logging.debug(f"Found DCIM Card: {disk.device}")
                 sd_card = self.analyzer.analyze_sd_card(disk.device, mountpoint_path)
                 sd_cards.append(sd_card)
         return sd_cards
@@ -38,9 +38,9 @@ class DevNameSDCardLoader:
     def find_sd_cards(self):
         sd_cards = []
         for disk in psutil.disk_partitions():
-            logging.debug(f"Checking {disk.device}")
+            #logging.debug(f"Checking {disk.device}")
             if self.is_devname_match(disk.device):
-                logging.debug(f"Found SD Card by device name: {disk.device}")
+                #logging.debug(f"Found SD Card by device name: {disk.device}")
                 sd_card = self.analyzer.analyze_sd_card(disk.device, Path(disk.mountpoint))
                 sd_cards.append(sd_card)
         return sd_cards

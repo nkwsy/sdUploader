@@ -5,7 +5,6 @@ from tkinter import filedialog as fd
 import tkcalendar
 from dotenv import load_dotenv
 
-import logging
 
 import sdUploader as sd
 from loguru import logger
@@ -100,7 +99,7 @@ class DataEntryForm:
                                       date=self.dateEntry.get_date(),
                                       notes=self.notes.get(),
                                       photographer=self.photographer.get())
-        logging.debug(f"Camera info submitted: {self.camera_info}")
+        logger.debug(f"Camera info submitted: {self.camera_info}")
         self.callback()
 
 
@@ -189,7 +188,7 @@ class SDCardUploaderGUI:
         except Exception as e:
             logger.error(f"Error updating SD cards: {str(e)}", exc_info=True)
         
-        self.master.after(10000, self.update_sd_cards)
+        self.master.after(5000, self.update_sd_cards)
 
     def create_drive_boxes(self, master, sd_cards, extended_attributes=True):
         for index, drive in enumerate(sd_cards):
@@ -238,7 +237,7 @@ class SDCardUploaderGUI:
         """Handle the drive selection and display the upload confirmation."""
         self.cleanup_last_download()
 
-        logging.info(f"Selected drive: {drive.device}")
+        logger.info(f"Selected drive: {drive.device}")
         self.drive = drive
         # self.upload_confirmation(self.drive)
 
@@ -387,7 +386,7 @@ class SDCardUploaderGUI:
                     self.erase_card(self.drive)
 
             else:
-                logging.warning("Upload failed!")
+                logger.warning("Upload failed!")
                 self.action_message['text'] = "Upload failed."
                 self.action_detail['text'] = "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help."
                 self.locked = False
@@ -396,7 +395,7 @@ class SDCardUploaderGUI:
 
 
     def erase_card(self, drive):
-        logging.debug(f"Erasing card {drive.device}")
+        logger.debug(f"Erasing card {drive.device}")
 
         try:
             # Change button states
@@ -411,11 +410,11 @@ class SDCardUploaderGUI:
 
             self.delete_thread = DeleteThread(drive.mountpoint, total_files=drive.file_count)
             self.delete_thread.start()
-            logging.debug("Started delete thread")
+            logger.debug("Started delete thread")
             self.update_erase_progress()
 
         except Exception as e:
-            logging.error(f"Error starting card erase: {str(e)}", exc_info=True)
+            logger.error(f"Error starting card erase: {str(e)}", exc_info=True)
             self.erase_card_btn.config(state=tk.NORMAL)
             messagebox.showerror("Error", f"Failed to erase card: {str(e)}")
 
@@ -448,7 +447,7 @@ class SDCardUploaderGUI:
                 self.erase_card_btn.config(state=tk.DISABLED)
                 self.autodelete_box.config(state=tk.DISABLED)
             else:
-                logging.warning("Erasure failed!")
+                logger.warning("Erasure failed!")
                 self.action_message['text'] = "Could not erase card."
                 self.action_detail['text'] = f"Error encountered erasing card. {str(self.delete_thread.error_message)}"
                 self.locked = False
@@ -553,6 +552,6 @@ def start_gui():
 if __name__ == "__main__":
     load_dotenv()
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
-    logging.basicConfig(level=LOG_LEVEL)
+    logger.configure(handlers=[{"sink": sys.stdout, "level": LOG_LEVEL}])
     start_gui()
 

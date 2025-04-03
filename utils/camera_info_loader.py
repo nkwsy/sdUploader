@@ -1,5 +1,6 @@
-import logging
+from loguru import logger
 import os
+import sys
 
 import requests
 from dotenv import load_dotenv
@@ -32,7 +33,7 @@ def fetch_camera_deployments():
 
         deployment_list = []
         for deployment in data:
-            logging.debug(f"Deployment: {deployment}")
+            logger.debug(f"Deployment: {deployment}")
             deployment_list.append(
                 Deployment(
                     cameraid=deployment["cameraId"]["name"],
@@ -52,7 +53,7 @@ def fetch_camera_deployments():
 
     except Exception as e:
         msg = f"Error fetching camera ids: {str(e)}"
-        logging.error(msg)
+        logger.error(msg)
         raise Exception(msg) from e
 
 
@@ -61,7 +62,7 @@ def fetch_camera_deployments():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logger.configure(handlers=[{"sink": sys.stdout, "level": "DEBUG"}])
     deployment_map = fetch_camera_deployments()
 
     jsonpickle.set_encoder_options('json', sort_keys=True, indent=2)

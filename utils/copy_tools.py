@@ -1,9 +1,8 @@
 
-import logging
+from loguru import logger
 from pathlib import Path
 import hashlib
 import shutil
-from shutil import COPY_BUFSIZE
 from warnings import catch_warnings
 
 from utils.sdcard_loader import ComboLoader
@@ -98,13 +97,13 @@ class FileInfo:
 
 def write_manifest_file(path, file_manifest):
     manifest_file_path = path / "manifest.json"
-    logging.debug(f"Writing manifest file: {manifest_file_path}")
+    logger.debug(f"Writing manifest file: {manifest_file_path}")
     try:
         with open(manifest_file_path, "w") as f:
             f.write(file_manifest.to_json(indent=2))
-            logging.debug(f"Wrote manifest file to {manifest_file_path / 'manifest.json'}")
+            logger.debug(f"Wrote manifest file to {manifest_file_path / 'manifest.json'}")
     except Exception as e:
-        logging.error(f"Error writing manifest file: {manifest_file_path}: {str(e)}")
+        logger.error(f"Error writing manifest file: {manifest_file_path}: {str(e)}")
         raise
 
 
@@ -119,7 +118,7 @@ def file_md5(file):
         return md5.hexdigest()
     except Exception as e:
         msg = f"Error calculating MD5 hash of file {file}: {str(e)}"
-        logging.error(msg)
+        logger.error(msg)
         raise Exception(msg) from e
 
 
@@ -139,41 +138,41 @@ def copy_tree(source, destination, verify_destination_md5=True, total_size=None,
         for dir in dirs:
             relative_path = (root / dir).relative_to(source)
             all_subdirs.append((root, relative_path))
-            logging.debug(f"processing dir: {relative_path}")
+            logger.debug(f"processing dir: {relative_path}")
             if dir in COPY_BLACKLIST_FOLDERS:
                 continue
             elif not (destination / relative_path).exists():
-                logging.debug(f"creating directory: {(destination / relative_path)}")
+                logger.debug(f"creating directory: {(destination / relative_path)}")
                 try:
                     (destination / relative_path).mkdir(parents=True, exist_ok=True)
                 except Exception as e:
                     msg = f"Could not create directory: {(destination / relative_path)}"
-                    logging.error(msg)
+                    logger.error(msg)
                     raise Exception(msg) from e
         # Copy all the files
         for file in files:
             relative_path = (root / file).relative_to(source)
             if relative_path.parts[0] in COPY_BLACKLIST_FOLDERS:
                 continue
-            logging.debug(f"processing file: {relative_path}")
-            logging.debug(f"copying file: {root / file} to {destination / relative_path}")
+            logger.debug(f"processing file: {relative_path}")
+            logger.debug(f"copying file: {root / file} to {destination / relative_path}")
             try:
                 stat = (root / file).stat()
                 md5_hash = file_md5(root / file)
                 shutil.copy2(root / file, destination / relative_path)
                 file_info = FileInfo(relative_path, stat.st_size, stat.st_mtime, md5_hash)
                 manifest.append(file_info)
-                logging.debug(f"copied file: {file_info}")
+                logger.debug(f"copied file: {file_info}")
                 if verify_destination_md5:
-                    logging.debug(f"verifying md5 hash of {destination / relative_path}")
+                    logger.debug(f"verifying md5 hash of {destination / relative_path}")
                     if md5_hash != file_md5(destination / relative_path):
-                        logging.error(f"MD5 hash of {destination / relative_path} does not match source file")
+                        logger.error(f"MD5 hash of {destination / relative_path} does not match source file")
                         raise Exception(f"MD5 hash of {destination / relative_path} does not match source file")
                     else:
-                        logging.debug(f"MD5 hash of {destination / relative_path} matches source file")
+                        logger.debug(f"MD5 hash of {destination / relative_path} matches source file")
             except Exception as e:
                 msg = f"Could not copy file: {root / file}: {str(e)}"
-                logging.error(msg)
+                logger.error(msg)
                 raise Exception(msg) from e
             current_size += (root / file).stat().st_size
             current_files += 1
@@ -184,12 +183,12 @@ def copy_tree(source, destination, verify_destination_md5=True, total_size=None,
         if relative_path.name in [".Trashes", ".Spotlight-V100",".fseventsd"]:
             continue
         else:
-            logging.debug(f"copying stats: {source / relative_path} to {(destination / relative_path)}")
+            logger.debug(f"copying stats: {source / relative_path} to {(destination / relative_path)}")
             try:
                 shutil.copystat(source / relative_path, destination / relative_path)
             except Exception as e:
                 msg = f"Could not copy directory stats: {source / relative_path}: {str(e)}"
-                logging.error(msg)
+                logger.error(msg)
                 raise Exception(msg) from e
     return manifest
 
@@ -201,7 +200,7 @@ def create_temp_folder(path):
     try:
         temp_path.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        logging.error(f"Error creating temp folder: {temp_path}: {str(e)}")
+        logger.error(f"Error creating temp folder: {temp_path}: {str(e)}")
         raise
     return temp_path
 
@@ -238,7 +237,7 @@ class CopyThread(Thread):
 
     def get_progress(self):
         current_progress = self.current_size / self.total_size
-        logging.debug(f"Current copy progress: {current_progress}")
+        logger.debug(f"Current copy progress: {current_progress}")
         progress = CopyProgress(self.current_size, self.current_files, self.total_size, self.total_files, current_progress)
         return progress
 
@@ -255,7 +254,7 @@ class CopyThread(Thread):
         write_manifest_file(self.destination_path, self.manifest)
 
     def run(self):
-        logging.debug("Starting copy thread")
+        logger.debug("Starting copy thread")
         try:
             self.manifest_file_list = copy_tree(self.source_path, self.destination_path, total_size=self.total_size, total_files=self.total_files, progress_callback=self.progress_callback)
 
@@ -269,7 +268,7 @@ class CopyThread(Thread):
 
         except Exception as e:
             msg = f"Error copying files: {str(e)}"
-            logging.error(msg)
+            logger.error(msg)
             self.error_message = msg
 
 
@@ -288,7 +287,7 @@ class DeleteThread(Thread):
 
     def get_progress(self):
         current_progress = self.current_files / self.total_files
-        logging.debug(f"Current delete progress: {current_progress}")
+        logger.debug(f"Current delete progress: {current_progress}")
         progress = CopyProgress(0, self.current_files, 0, self.total_files,
                                 current_progress)
         return progress
@@ -298,30 +297,30 @@ class DeleteThread(Thread):
         return f"{progress.current_files} of {progress.total_files} files"
 
     def delete_tree(self):
-        logging.debug(f"Deleting files: {self.path}")
+        logger.debug(f"Deleting files: {self.path}")
         for root, dirs, files in self.path.walk(top_down=False):
             for file in files:
-                logging.debug(f"deleting file: {(root / file)}")
+                logger.debug(f"deleting file: {(root / file)}")
                 try:
                     os.remove(root / file)
                     self.current_files += 1
                 except Exception as e:
                     msg = f"Could not delete file: {(root / file)}"
-                    logging.error(msg)
+                    logger.error(msg)
                     raise Exception(msg) from e
             for dir in dirs:
                 relative_path = (root / dir).relative_to(self.path)
                 if relative_path.parts[0] in DELETE_BLACKLIST_FOLDERS:
                     self.has_system_files = True
-                    logging.info(f"Skipping deletion of system files: {(root / relative_path)}")
+                    logger.info(f"Skipping deletion of system files: {(root / relative_path)}")
                     continue
                 else:
-                    logging.debug(f"deleting directory: {(root / relative_path)}")
+                    logger.debug(f"deleting directory: {(root / relative_path)}")
                     try:
                         os.rmdir(self.path / relative_path)
                     except Exception as e:
                         msg = f"Could not delete directory: {(self.path / relative_path)}"
-                        logging.error(msg)
+                        logger.error(msg)
                         raise Exception(msg) from e
 
     def run(self):
@@ -329,5 +328,5 @@ class DeleteThread(Thread):
             self.delete_tree()
         except Exception as e:
             msg = f"Error deleting files: {str(e)}"
-            logging.error(msg)
+            logger.error(msg)
             self.error_message = msg

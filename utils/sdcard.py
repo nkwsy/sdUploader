@@ -1,9 +1,10 @@
-import logging
+from loguru import logger
 from pathlib import Path
 from datetime import datetime
 import psutil
 from dotenv import load_dotenv
 import os
+import sys
 import jsonpickle
 
 
@@ -123,7 +124,7 @@ if __name__ == "__main__":
     load_dotenv()
     test_mountpoint = Path(os.getenv("TEST_MOUNTPOINT"))
     test_device = os.getenv("TEST_DEVICE")
-    logging.basicConfig(level=logging.DEBUG)
+    logger.configure(handlers=[{"sink": sys.stdout, "level": "DEBUG"}])
     print_relative_files_in_sd_card(test_mountpoint)
     print(f"modification range: {get_modification_range(test_mountpoint)}")
     sd_card_analyzer = SDCardAnalyzer()

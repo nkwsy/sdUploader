@@ -1,4 +1,5 @@
 import logging
+import webbrowser
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk
@@ -7,6 +8,7 @@ from pathlib import Path
 from utils.copy_tools import FileManifest, CopyThread, write_manifest_file
 from utils.card_metadata import (write_info_file, write_uploaded_marker_file, write_camera_info_file,
                                  create_upload_folder, find_download_metadata)
+import webbrowser
 
 class CompletedJob:
     def __init__(self, download_path, upload_path, camera_info, file_manifest, status="Uploaded"):
@@ -81,20 +83,23 @@ class UploadManager:
             'file_count',
             'total_size',
             'status',
-            'download_path'
+            'download_path',
+            'upload_path'
         ))
         treeview = self.upload_queue_treeview
         treeview.column("#0", width=0, stretch=tk.NO)
-        treeview.column("name", width=200)
-        treeview.column("file_count", width=100)
+        treeview.column("name", width=180)
+        treeview.column("file_count", width=70)
         treeview.column("total_size", width=100)
         treeview.column("status", width=100)
-        treeview.column("download_path", width=200)
+        treeview.column("download_path", width=300)
+        treeview.column("upload_path", width=300)
         treeview.heading("name", text="Name")
         treeview.heading("file_count", text="File Count")
         treeview.heading("total_size", text="Total Size")
         treeview.heading("status", text="Status")
         treeview.heading("download_path", text="Download Path")
+        treeview.heading("upload_path", text="Upload Path")
         #treeview.grid(row=0, column=0, sticky='nsew')
 
         self.tree_scroll = ttk.Scrollbar(self.master, orient='vertical', command=self.upload_queue_treeview.yview)
@@ -103,6 +108,7 @@ class UploadManager:
 
         self.titleLabel.grid(row=0, column=0, pady=20)
         self.upload_queue_treeview.grid(row=1, column=0, sticky='nsew', padx=10, pady=10)
+        self.upload_queue_treeview.bind("<Double-1>", self.OnDoubleClick)
         self.tree_scroll.grid(row=1, column=1, sticky='ns')
 
 
@@ -114,6 +120,21 @@ class UploadManager:
 
         self.load_completed_jobs()
 
+
+    def OnDoubleClick(self, event):
+        item = self.upload_queue_treeview.identify_row(event.y)
+        if item:
+            column = self.upload_queue_treeview.identify_column(event.x)
+            if column == "#6":
+                upload_path = self.upload_queue_treeview.item(item, "values")[5]
+                logging.debug(f"Double clicked on {upload_path}")
+                webbrowser.open(f"file://{upload_path}")
+            elif column == "#5":
+                download_path = self.upload_queue_treeview.item(item, "values")[4]
+                logging.debug(f"Double clicked on {download_path}")
+                webbrowser.open(f"file://{download_path}")
+        else:
+            logging.debug("Double clicked on nothing")
 
     def update_upload_queue_tab(self, new_upload_job=None):
         # We're going to move completed jobs to a different queue in a bit (but not now)
@@ -131,7 +152,8 @@ class UploadManager:
                 upload_job.file_manifest.file_count,
                 f"{round(upload_job.file_manifest.file_total_size / (1024.0 ** 3), 2)} GB",
                 upload_job.status,
-                upload_job.download_path))
+                upload_job.download_path,
+                upload_job.upload_path))
         if live_jobs:
             self.master.after(100, self.update_upload_queue_tab)
 

@@ -264,7 +264,6 @@ class SDCardUploaderGUI:
         if self.download_frame:
             self.download_frame.destroy()
 
-
         
 
     def upload_confirmation(self):

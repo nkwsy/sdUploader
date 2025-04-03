@@ -12,7 +12,7 @@ import tkinter as tk
 from threading import Thread
 import time
 
-from utils.copy_tools import CopyThread, FileManifest, CopyProgress, CameraInfo
+from utils.copy_tools import CopyThread, FileManifest, CopyProgress, CameraInfo, DeleteThread
 from utils.card_metadata import create_upload_folder, write_info_file, write_camera_info_file, \
     write_uploaded_marker_file, create_download_folder, find_download_metadata
 from upload_manager import UploadThread
@@ -114,4 +114,18 @@ if __name__ == "__main__":
 
     download_manifest_files = find_download_metadata()
     print(download_manifest_files)
+
+    delete_thread = DeleteThread(download_folder, total_files=manifest.file_count)
+    delete_thread.start()
+    os.mkdir(download_folder / ".Trashes")
+    while delete_thread.is_alive():
+        time.sleep(0.1)
+        logging.info(f"Deleting {delete_thread.current_files} of {delete_thread.total_files} files")
+    delete_thread.join()
+    if delete_thread.has_trash:
+        logging.info("Output folder has .Trashes folder!")
+    if delete_thread.error_message is not None:
+        logging.error(delete_thread.error_message)
+    else:
+        logging.info("Delete complete")
 

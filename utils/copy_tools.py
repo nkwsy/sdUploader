@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import hashlib
 import shutil
-
+from warnings import catch_warnings
 
 from utils.sdcard_loader import ComboLoader
 from utils.sdcard import SDCardAnalyzer, ModificationRange
@@ -123,6 +123,10 @@ def file_md5(file):
 
 
 BLACKLIST_FOLDERS = [".Trashes", ".Spotlight-V100",".fseventsd", ".Trash-1000"]
+TRASH_FOLDERS = [".Trashes", ".Trash-1000"]
+
+
+
 
 def copy_tree(source, destination, verify_destination_md5=True, total_size=None, total_files=None, progress_callback=None):
     all_subdirs = []
@@ -205,6 +209,7 @@ def create_temp_folder(path):
 
 
 
+
 class CopyProgress:
     def __init__(self, current_size, current_files, total_size, total_files, percent):
         self.current_size = current_size
@@ -270,5 +275,58 @@ class CopyThread(Thread):
 
 
 
+class DeleteThread(Thread):
+    def __init__(self, path, *, total_files):
+        super().__init__()
+        self.path = path
+        self.total_files = total_files
+        self.current_files = 0
+        self.has_trash = False
 
+        self.error_message = None
 
+    def get_progress(self):
+        current_progress = self.current_files / self.total_files
+        logging.debug(f"Current delete progress: {current_progress}")
+        progress = CopyProgress(0, self.current_files, 0, self.total_files,
+                                current_progress)
+        return progress
+
+    def get_progress_string(self):
+        progress = self.get_progress()
+        return f"{progress.current_files} of {progress.total_files} files"
+
+    def delete_tree(self):
+        logging.debug(f"Deleting files: {self.path}")
+        for root, dirs, files in self.path.walk(top_down=False):
+            for file in files:
+                logging.debug(f"deleting file: {(root / file)}")
+                try:
+                    os.remove(root / file)
+                    self.current_files += 1
+                except Exception as e:
+                    msg = f"Could not delete file: {(root / file)}"
+                    logging.error(msg)
+                    raise Exception(msg) from e
+            for dir in dirs:
+                relative_path = (root / dir).relative_to(self.path)
+                if relative_path.parts[0] in TRASH_FOLDERS:
+                    self.has_trash = True
+                if relative_path.parts[0] in BLACKLIST_FOLDERS:
+                    continue
+                else:
+                    logging.debug(f"deleting directory: {(root / relative_path)}")
+                    try:
+                        os.rmdir(self.path / relative_path)
+                    except Exception as e:
+                        msg = f"Could not delete directory: {(self.path / relative_path)}"
+                        logging.error(msg)
+                        raise Exception(msg) from e
+
+    def run(self):
+        try:
+            self.delete_tree()
+        except Exception as e:
+            msg = f"Error deleting files: {str(e)}"
+            logging.error(msg)
+            self.error_message = msg

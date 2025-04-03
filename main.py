@@ -18,7 +18,7 @@ import os
 import utils.camtrap_prep_1 as ucp
 import utils.csv_tools as csv_tools
 import sys
-from utils.copy_tools import  CopyThread, CameraInfo
+from utils.copy_tools import CopyThread, CameraInfo, DeleteThread
 from pathlib import Path
 from utils.card_metadata import create_download_folder
 
@@ -289,15 +289,13 @@ class SDCardUploaderGUI:
         confirm_window = ttk.LabelFrame(container_frame, text='Download status')
         confirm_window.grid(pady=20, padx=10)
 
-        self.confirm_message = tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?", font="none 10 bold")
-        self.confirm_message.pack(pady=10)
-        self.download_time = tk.Label(confirm_window, wraplength=320, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device")
-        self.download_time.pack(pady=10)
+        self.action_message = tk.Label(confirm_window, text=f"Are you sure you want to upload from {drive.device}?", font="none 10 bold")
+        self.action_message.pack(pady=10)
+        self.action_detail = tk.Label(confirm_window, wraplength=320, text=f"Will download {drive.get_file_total_size_gb()} GB from {drive.file_count} files on device")
+        self.action_detail.pack(pady=10)
         # Progress bar setup
-        self.progress_text = tk.StringVar()
-        self.progress_text.set("0%")
-        self.progress = ttk.Progressbar(confirm_window, orient=tk.HORIZONTAL, length=300, mode='determinate', maximum=1, )
-        self.progress.pack(pady=20)
+        self.progress_bar = ttk.Progressbar(confirm_window, orient=tk.HORIZONTAL, length=300, mode='determinate', maximum=1, )
+        self.progress_bar.pack(pady=20)
 
         # autodelete checkbox
         self.autodelete = tk.IntVar()
@@ -324,7 +322,7 @@ class SDCardUploaderGUI:
         """Simulates the upload process by updating the progress bar."""
         try:
 
-            self.confirm_message['text'] = f"Downloading data from card {self.drive.device}..."
+            self.action_message['text'] = f"Downloading data from card {self.drive.device}..."
             logger.info(f"Starting card download from {self.drive.device}")
             self.confirm_btn.config(state=tk.DISABLED)
             self.autodelete_box.config(state=tk.DISABLED)
@@ -357,9 +355,9 @@ class SDCardUploaderGUI:
         progress = self.download_thread.get_progress()
         
         # Update the progress bar
-        self.progress['value'] = progress.percent
+        self.progress_bar['value'] = progress.percent
 
-        self.download_time['text'] = f"Completed {progress.current_files} of {progress.total_files} files. Progress: {round(progress.percent * 100, 1)}%."
+        self.action_detail['text'] = f"Completed {progress.current_files} of {progress.total_files} files. Progress: {round(progress.percent * 100, 1)}%."
         
         # Update the progress text
         # self.download_time['text'](f"{int(progress_value['progress_percent'] * 100)}%")
@@ -369,11 +367,9 @@ class SDCardUploaderGUI:
         if self.download_thread.is_alive():
             self.master.after(1000, self.update_progress)  # Update every second
         else:
-            ud_progress = self.download_thread.get_progress()
             if not self.download_thread.error_message:
                 logger.info("Download completed!")
-
-                # self.locked = False
+                self.locked = False
 
                 self.upload_manager.add_upload_job(self.download_thread.destination_path, self.download_thread.manifest)
 
@@ -381,10 +377,9 @@ class SDCardUploaderGUI:
                 # TODO: Need to re-enable this code path
                 #self.create_camtrap_tables(self.data_entry_info)
 
-                self.confirm_message['text'] = f"Card download complete"
-                self.download_time['text'] = f"It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress."
-                self.progress_text.set("100%")
-                self.progress['value'] = 1
+                self.action_message['text'] = f"Card download complete"
+                self.action_detail['text'] = f"It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress."
+                self.progress_bar['value'] = 1
 
                 print(type(self.autodelete.get()))
 
@@ -392,15 +387,10 @@ class SDCardUploaderGUI:
                 if self.autodelete.get() == 1:
                     self.erase_card(self.drive)
 
-
-
-                #messagebox.showinfo("Card download complete", "Card download complete.", detail="It is now safe to wipe or remove the card. Contents will be uploaded to the server in the background. View the upload manager for upload progress.")
-                #self.wipeSDWindow(self.drive.mountpoint)
-
             else:
                 logging.warning("Upload failed!")
-                self.confirm_message['text'] = "Upload failed."
-                self.download_time['text'] = "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help."
+                self.action_message['text'] = "Upload failed."
+                self.action_detail['text'] = "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help."
                 self.locked = False
                 messagebox.showinfo("Upload Failed", "Upload Failed. Check the temp folder to make sure all files are there. May have to manually upload or call for help")
                 self.confirm_btn.config(state=tk.NORMAL)
@@ -408,9 +398,64 @@ class SDCardUploaderGUI:
 
     def erase_card(self, drive):
         logging.debug(f"Erasing card {drive.device}")
-        self.erase_card_btn.config(state=tk.DISABLED)
-        # TODO: Erase card in a separate thread, report on status in the main window, etc. How fun!
 
+        try:
+            # Change button states
+            self.erase_card_btn.config(state=tk.DISABLED)
+            self.confirm_btn.config(state=tk.DISABLED)
+            self.autodelete_box.config(state=tk.DISABLED)
+
+            # Update messages
+            self.action_message['text'] = f"Erasing card {drive.device}..."
+            self.action_detail['text'] = f""
+            self.progress_bar['value'] = 0
+
+            self.delete_thread = DeleteThread(drive.mountpoint, total_files=drive.file_count)
+            self.delete_thread.start()
+            logging.debug("Started delete thread")
+            self.update_erase_progress()
+
+        except Exception as e:
+            logging.error(f"Error starting card erase: {str(e)}", exc_info=True)
+            self.erase_card_btn.config(state=tk.NORMAL)
+            messagebox.showerror("Error", f"Failed to erase card: {str(e)}")
+
+
+    def update_erase_progress(self):
+        progress = self.delete_thread.get_progress()
+
+        # Update the progress bar
+        self.progress_bar['value'] = progress.percent
+        self.action_detail['text'] = f"Deleted {progress.current_files} of {progress.total_files} files."
+
+        # Check if the delete thread is complete
+        if self.delete_thread.is_alive():
+            self.master.after(500, self.update_erase_progress)
+        else:
+            if not self.delete_thread.error_message:
+                logger.info("Card erasure complete!")
+                self.locked = False
+
+                if self.delete_thread.has_system_files:
+                    self.action_message['text'] = f"Card erasure partially successful"
+                    self.action_detail[
+                        'text'] = f"Card data cleared. However, card has system folders that were not removed."
+                else:
+                    self.action_message['text'] = f"Card erasure complete"
+                    self.action_detail['text'] = f"Card is now ready for new data. Card contents may still be uploading in background."
+
+                self.progress_bar['value'] = 1
+                self.confirm_btn.config(state=tk.DISABLED)
+                self.erase_card_btn.config(state=tk.DISABLED)
+                self.autodelete_box.config(state=tk.DISABLED)
+            else:
+                logging.warning("Erasure failed!")
+                self.action_message['text'] = "Could not erase card."
+                self.action_detail['text'] = f"Error encountered erasing card. {str(self.delete_thread.error_message)}"
+                self.locked = False
+                self.confirm_btn.config(state=tk.DISABLED)
+                self.erase_card_btn.config(state=tk.NORMAL)
+                self.autodelete_box.config(state=tk.DISABLED)
 
 
     def create_camtrap_tables(self, data_entry_info):

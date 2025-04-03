@@ -6,7 +6,7 @@ import logging
 import jsonpickle
 
 
-from utils.copy_tools import create_temp_folder, BLACKLIST_FOLDERS, FileManifest
+from utils.copy_tools import create_temp_folder, COPY_BLACKLIST_FOLDERS, FileManifest
 from utils.sdcard import ModificationRange
 
 
@@ -22,7 +22,7 @@ def find_download_metadata():
     logging.debug(f"Looking for SD downloads in download folder: {download_path}")
     manifest_files = []
     for dir in download_path.iterdir():
-        if not dir.is_dir() or dir.name in BLACKLIST_FOLDERS:
+        if not dir.is_dir() or dir.name in COPY_BLACKLIST_FOLDERS:
             continue
         manifest_file = dir / "manifest.json"
         if manifest_file.is_file():

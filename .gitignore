@@ -6,6 +6,7 @@ temp/*
 test*/*
 build/*
 
+.idea/*
 .DS*
 token.pickle
 *.log

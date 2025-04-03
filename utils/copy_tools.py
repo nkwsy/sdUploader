@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import hashlib
 import shutil
+from shutil import COPY_BUFSIZE
 from warnings import catch_warnings
 
 from utils.sdcard_loader import ComboLoader
@@ -122,8 +123,8 @@ def file_md5(file):
         raise Exception(msg) from e
 
 
-BLACKLIST_FOLDERS = [".Trashes", ".Spotlight-V100",".fseventsd", ".Trash-1000"]
-TRASH_FOLDERS = [".Trashes", ".Trash-1000"]
+COPY_BLACKLIST_FOLDERS = [".Trashes", ".Spotlight-V100", ".fseventsd", ".Trash-1000"]
+DELETE_BLACKLIST_FOLDERS = [".Trashes", ".Spotlight-V100", ".fseventsd"]
 
 
 
@@ -139,7 +140,7 @@ def copy_tree(source, destination, verify_destination_md5=True, total_size=None,
             relative_path = (root / dir).relative_to(source)
             all_subdirs.append((root, relative_path))
             logging.debug(f"processing dir: {relative_path}")
-            if dir in BLACKLIST_FOLDERS:
+            if dir in COPY_BLACKLIST_FOLDERS:
                 continue
             elif not (destination / relative_path).exists():
                 logging.debug(f"creating directory: {(destination / relative_path)}")
@@ -152,7 +153,7 @@ def copy_tree(source, destination, verify_destination_md5=True, total_size=None,
         # Copy all the files
         for file in files:
             relative_path = (root / file).relative_to(source)
-            if relative_path.parts[0] in BLACKLIST_FOLDERS:
+            if relative_path.parts[0] in COPY_BLACKLIST_FOLDERS:
                 continue
             logging.debug(f"processing file: {relative_path}")
             logging.debug(f"copying file: {root / file} to {destination / relative_path}")
@@ -281,7 +282,7 @@ class DeleteThread(Thread):
         self.path = path
         self.total_files = total_files
         self.current_files = 0
-        self.has_trash = False
+        self.has_system_files = False
 
         self.error_message = None
 
@@ -310,9 +311,9 @@ class DeleteThread(Thread):
                     raise Exception(msg) from e
             for dir in dirs:
                 relative_path = (root / dir).relative_to(self.path)
-                if relative_path.parts[0] in TRASH_FOLDERS:
-                    self.has_trash = True
-                if relative_path.parts[0] in BLACKLIST_FOLDERS:
+                if relative_path.parts[0] in DELETE_BLACKLIST_FOLDERS:
+                    self.has_system_files = True
+                    logging.info(f"Skipping deletion of system files: {(root / relative_path)}")
                     continue
                 else:
                     logging.debug(f"deleting directory: {(root / relative_path)}")

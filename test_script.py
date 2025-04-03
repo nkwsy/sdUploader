@@ -122,7 +122,7 @@ if __name__ == "__main__":
         time.sleep(0.1)
         logging.info(f"Deleting {delete_thread.current_files} of {delete_thread.total_files} files")
     delete_thread.join()
-    if delete_thread.has_trash:
+    if delete_thread.has_system_files:
         logging.info("Output folder has .Trashes folder!")
     if delete_thread.error_message is not None:
         logging.error(delete_thread.error_message)

@@ -189,7 +189,12 @@ def copy_tree(source, destination, verify_destination_md5=True, total_size=None,
             except Exception as e:
                 msg = f"Could not copy directory stats: {source / relative_path}: {str(e)}"
                 logger.error(msg)
-                raise Exception(msg) from e
+                # Will need to ignore directory stat copy errors, they were happening sporadically
+                # and it was causing copy failures that were not worth actually failing the entire
+                # operation for, since it's really just a vanity operation. Ignoring specific
+                # errors didn't seem to change the overall results of the job (most of the attributes
+                # seemed to actually copy over in the end.
+                #raise Exception(msg) from e
     return manifest
 
 

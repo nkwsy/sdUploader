@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import psutil
 from pathlib import Path
 import os
@@ -15,10 +15,13 @@ class DCIMSDCardLoader:
             #logging.debug(f"Checking {disk.device}")
             mountpoint_path = Path(disk.mountpoint)
             dcim_path = mountpoint_path / 'DCIM'
-            if dcim_path.exists():
+            try:
+                if dcim_path.exists():
                 #logging.debug(f"Found DCIM Card: {disk.device}")
                 sd_card = self.analyzer.analyze_sd_card(disk.device, mountpoint_path)
                 sd_cards.append(sd_card)
+            except Exception as e:
+                logger.debug(f"Error reading DCIM folder: {dcim_path}: {str(e)}")
         return sd_cards
 
 

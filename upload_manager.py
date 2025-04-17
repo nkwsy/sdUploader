@@ -5,7 +5,9 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 
-from utils.copy_tools import FileManifest, CopyThread, write_manifest_file
+import os
+from datetime import datetime
+from utils.copy_tools import FileManifest, CopyThread, write_manifest_file, log_manifest
 from utils.card_metadata import (write_info_file, write_uploaded_marker_file, write_camera_info_file,
                                  create_upload_folder, find_download_metadata)
 import webbrowser
@@ -30,6 +32,8 @@ class UploadThread(CopyThread):
                          total_files=file_manifest.file_count,
                          modification_range=file_manifest.modification_range,
                          file_manifest=file_manifest)
+        self.start_time = datetime.now()
+        self.end_time = None
         self.download_path = download_path
         self.upload_path = upload_path
         self.camera_info = camera_info
@@ -44,10 +48,14 @@ class UploadThread(CopyThread):
         self.status = self.get_progress_string()
 
     def write_metadata_files(self):
+        # Mark complete as soon as this method is called because it is called from super()'s run()
+        # This is actually kind of borked?
+        self.end_time = datetime.now()
         write_info_file(self.upload_path, self.camera_info, self.file_manifest)
         write_camera_info_file(self.upload_path, self.camera_info)
         write_uploaded_marker_file(self.download_path, self.upload_path)
         write_manifest_file(self.download_path, self.file_manifest)
+        log_manifest(self.start_time, self.end_time, self.file_manifest)
 
         super().write_metadata_files()
 

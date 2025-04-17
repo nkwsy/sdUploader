@@ -552,6 +552,9 @@ def start_gui():
 if __name__ == "__main__":
     load_dotenv()
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
-    logger.configure(handlers=[{"sink": sys.stdout, "level": LOG_LEVEL}])
+    LOG_RETENTION = os.getenv('LOG_RETENTION', '10 days')
+    LOG_LOCATION = os.getenv('LOG_LOCATION', 'logs')
+    logger.add(os.path.join(LOG_LOCATION, 'console-{time}.log'), level=LOG_LEVEL, retention="10 days")
+    logger.add(sys.stdout, level=LOG_LEVEL)
     start_gui()
 

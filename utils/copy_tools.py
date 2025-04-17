@@ -9,7 +9,7 @@ from utils.sdcard_loader import ComboLoader
 from utils.sdcard import SDCardAnalyzer, ModificationRange
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import jsonpickle
 import tkinter as tk
 from threading import Thread
@@ -19,6 +19,9 @@ import time
 class DatetimeHandler(jsonpickle.handlers.BaseHandler):
     def flatten(self, obj, data):
         return obj.isoformat()
+
+
+MANIFEST_LOG_PATH = Path(os.getenv('DOWNLOAD_FOLDER')) / "upload_manifests.log"
 
 UPLOAD_STATE = (
     "incomplete",
@@ -105,6 +108,37 @@ def write_manifest_file(path, file_manifest):
     except Exception as e:
         logger.error(f"Error writing manifest file: {manifest_file_path}: {str(e)}")
         raise
+
+
+class ManifestLogEntry:
+    def __init__(self,
+                 upload_start_date: datetime,
+                 upload_end_date: datetime,
+                 upload_seconds: timedelta,
+                 file_manifest: FileManifest):
+        self.upload_start_time = upload_start_date
+        self.upload_end_time = upload_end_date
+        self.upload_seconds = upload_seconds
+        self.file_manifest = file_manifest
+
+    def to_json(self, indent=None):
+        return jsonpickle.encode(self, unpicklable=False, indent=indent)
+
+def log_manifest(start_time: datetime, end_time: datetime, file_manifest: FileManifest):
+    logger.debug("Logging manifest file: {file_manifest}")
+
+    try:
+        with open (MANIFEST_LOG_PATH, "a") as manifest_log:
+            entry = ManifestLogEntry(upload_start_date=start_time,
+                                     upload_end_date=end_time,
+                                     upload_seconds=(end_time - start_time).total_seconds() if end_time else None,
+                                     file_manifest=file_manifest)
+            manifest_log.write(entry.to_json())
+            manifest_log.write('\n')
+    except Exception as e:
+        msg = f"Error writing manifest log file: {MANIFEST_LOG_PATH}: {str(e)}"
+        logger.error(msg)
+        raise Exception(msg) from e
 
 
 

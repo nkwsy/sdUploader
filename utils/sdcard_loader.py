@@ -7,8 +7,8 @@ from utils.sdcard import SDCardAnalyzer
 
 
 class DCIMSDCardLoader:
-    def __init__(self, analyzer):
-        self.analyzer = analyzer
+    def __init__(self):
+        self.analyzer = SDCardAnalyzer()
     def find_sd_cards(self):
         sd_cards = []
         for disk in psutil.disk_partitions():
@@ -17,17 +17,17 @@ class DCIMSDCardLoader:
             dcim_path = mountpoint_path / 'DCIM'
             try:
                 if dcim_path.exists():
-                #logging.debug(f"Found DCIM Card: {disk.device}")
-                sd_card = self.analyzer.analyze_sd_card(disk.device, mountpoint_path)
-                sd_cards.append(sd_card)
+                # logging.debug(f"Found DCIM Card: {disk.device}")
+                    sd_card = self.analyzer.analyze_sd_card(disk.device, mountpoint_path)
+                    sd_cards.append(sd_card)
             except Exception as e:
                 logger.debug(f"Error reading DCIM folder: {dcim_path}: {str(e)}")
         return sd_cards
 
 
 class DevNameSDCardLoader:
-    def __init__(self, analyzer):
-        self.analyzer = analyzer
+    def __init__(self):
+        self.analyzer = SDCardAnalyzer()
 
     def is_devname_match(self, device_string):
         '''Check if a mounted storage device is an SD card'''
@@ -51,7 +51,7 @@ class DevNameSDCardLoader:
 
 class ComboLoader:
     def __init__(self):
-        self.sd_card_loaders = [DCIMSDCardLoader(SDCardAnalyzer()), DevNameSDCardLoader(SDCardAnalyzer())]
+        self.sd_card_loaders = [DCIMSDCardLoader(), DevNameSDCardLoader()]
 
     def find_sd_cards(self):
         '''Returns a list of SDCardInfo objects'''

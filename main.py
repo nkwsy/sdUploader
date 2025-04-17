@@ -21,7 +21,7 @@ from utils.copy_tools import CopyThread, CameraInfo, DeleteThread
 from pathlib import Path
 from utils.card_metadata import create_download_folder
 
-from utils.sdcard_loader import ComboLoader
+from utils.sdcard_loader import DevNameSDCardLoader
 from utils.copy_tools import FileManifest
 
 from upload_manager import UploadManager
@@ -173,7 +173,7 @@ class SDCardUploaderGUI:
 
     def update_sd_cards(self):
         try:
-            sd_cards = ComboLoader().find_sd_cards()
+            sd_cards = DevNameSDCardLoader().find_sd_cards()
             if sd_cards is None:
                 logger.debug("No SD cards detected")
                 messagebox.showinfo("No SD cards", "Please insert an SD card")
